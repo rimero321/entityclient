@@ -1,10 +1,10 @@
-pip install javascript
-pip install PyQt5
-pip install QtWebEngineWidgets
-pip install threading
-pip install asyncio
-pip install socket
-pip install json
-pip install tempfile
-pip install Pillow
-pip install notifypy
+javascript
+PyQt5
+QtWebEngineWidgets
+threading
+asyncio
+socket
+json
+tempfile
+Pillow
+notifypy
