@@ -4,3 +4,5 @@ javascript
 asyncio
 Pillow
 notify_py
+flask
+flask_cors
