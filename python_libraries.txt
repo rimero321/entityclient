@@ -1,10 +1,6 @@
 PyQt5
 PyQtWebEngine
 javascript
-threading
 asyncio
-socket
-json
-tempfile
 Pillow
-notifypy
+notify_py
