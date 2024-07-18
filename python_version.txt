@@ -1,2 +1,4 @@
-link: https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
-name: python-3.12.4-amd64.exe
+link_python: https://www.python.org/ftp/python/3.12.4/python-3.12.4-amd64.exe
+name_python: python-3.12.4-amd64.exe
+link_nodejs: https://nodejs.org/dist/v22.5.0/node-v22.5.0-x64.msi
+name_nodejs: node-v22.5.0-x64.msi
