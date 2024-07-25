@@ -1,1 +1,1885 @@
+from javascript .errors import JavaScriptError #line:1
+from flask import Flask ,request ,jsonify ,Response #line:3
+from flask_cors import CORS #line:4
+from PyQt5 .QtWidgets import QApplication ,QMainWindow #line:5
+from PyQt5 .QtWebEngineWidgets import QWebEngineView #line:6
+from PyQt5 .QtWebChannel import QWebChannel #line:7
+from tkinter import messagebox #line:8
+from javascript import require ,On ,errors #line:9
+from random import uniform #line:10
+from sys import exit ,argv #line:11
+from asyncio import run ,sleep #line:12
+from threading import Thread ,Event #line:13
+from queue import Queue ,Empty #line:14
+from hashlib import sha512 #line:15
+from requests import get #line:16
+from subprocess import check_output #line:17
+import time #line:18
+mineflayer =require ('mineflayer')#line:20
+pathfinder =require ('mineflayer-pathfinder')#line:21
+GoalFollow =pathfinder .goals .GoalFollow #line:22
+isFollowing =False #line:24
+task_queue =Queue ()#line:25
+interaction_done =Event ()#line:26
+tapemouse_isClicking =False #line:28
+last_bot_message =""#line:30
+message_queue =Queue ()#line:31
+html_content =r"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@4/dark.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #fff;
+            font-size: 18px;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background-color: #111;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            background-color: #222;
+            padding: 20px;
+            width: 300px;
+        }
+        .sidebar h2 {
+            margin-top: 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            padding: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        .sidebar li:hover {
+            background-color: #333;
+        }
+        
+        .sidebar.gradient-blue-green { background-image: linear-gradient(to right, blue, green); }
+        .sidebar.gradient-darkblue { background-image: linear-gradient(to right, darkblue, #222); }
+        .sidebar.gradient-red-orange { background-image: linear-gradient(to right, red, orange); }
+        .sidebar.gradient-purple-blue { background-image: linear-gradient(to right, purple, blue); }
+        .sidebar.gradient-yellow-green { background-image: linear-gradient(to right, yellow, green); }
+        .sidebar.gradient-orange-red { background-image: linear-gradient(to right, darkred, #500000); }
+        .sidebar.gradient-gold-yellow { background-image: linear-gradient(to right, gold, yellow); }
+        .sidebar.gradient-cyan-blue { background-image: linear-gradient(to right, cyan, blue); }
+        .sidebar.gradient-lime-green { background-image: linear-gradient(to right, lime, green); }
+        .sidebar.gradient-pink-purple { background-image: linear-gradient(to right, pink, purple); }
+        .sidebar.gradient-teal-blue { background-image: linear-gradient(to right, teal, blue); }
+        .sidebar.gradient-brown-beige { background-image: linear-gradient(to right, brown, beige); }
+        .sidebar.gradient-gray-black { background-image: linear-gradient(to right, gray, black); }
+        
+        .time {
+            font-size: 16px;
+            color: #aaa;
+            margin-top: 20px;
+        }
+        .theme {
+            display: none;
+        }
+        .content {
+            flex-grow: 1;
+            background-color: #111;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .home-content, .misc-content, .ai-content, .custom-function-content {
+            width: 500px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .form-group input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #333;
+            background-color: #222;
+            color: #fff;
+            font-size: 18px;
+            border-radius: 10px;
+        }
+        .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #555;
+        }
+        .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 17px;
+            transition: background-color 0.2s;
+        }
+        .form-group button:hover {
+            background-color: #286090;
+        }
+        .content > div {
+            display: none;
+        }
+        .content > div:first-child {
+            display: block;
+        }
+        body.dark {
+            background-color: #111;
+        }
+        body.dark .content {
+            background-color: #111;
+        }
 
+        .function-list {
+            list-style: none;
+            padding: 0;
+        }
+        .function-list li {
+            padding: 15px;
+            cursor: pointer;
+            font-size: 20px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            background-color: #333;
+            margin-bottom: 10px;
+        }
+        .function-list li:hover {
+            background-color: #444;
+        }
+        .selected {
+            background-color: #444 !important;
+        }
+        #afk-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 40px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 1000;
+            width: 400px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        #afk-modal h2 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+        #afk-modal .form-group {
+            margin-bottom: 20px;
+        }
+        #afk-modal .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #afk-modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #111;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #afk-modal .form-group input:focus {
+            outline: none;
+            border-color: #555;
+        }
+        #afk-modal .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        #afk-modal .form-group button:hover {
+            background-color: #286090;
+        }
+        #afk-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 20px;
+        }
+        #afk-modal .close-btn:hover {
+            color: #fff;
+        }
+        
+        #start-button {
+            outline: none;
+        }
+
+        #click-on-gui-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 40px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 1000;
+            width: 400px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        #click-on-gui-modal h2 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+        #click-on-gui-modal .form-group {
+            margin-bottom: 20px;
+        }
+        #click-on-gui-modal .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #click-on-gui-modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #111;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+        #click-on-gui-modal .form-group input:focus {
+            outline: none;
+            border-color: #555;
+        }
+        #click-on-gui-modal .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        #click-on-gui-modal .form-group button:hover {
+            background-color: #286090;
+        }
+        #click-on-gui-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 20px;
+        }
+        #click-on-gui-modal .close-btn:hover {
+            color: #fff;
+        }
+        
+        .console-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+        
+        #console-log {
+            flex-grow: 1;
+            padding: 10px;
+            background-color: #222;
+            color: #fff;
+            border: 2px solid #333;
+            border-radius: 10px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            font-size: 18px;
+            max-height: 300px;
+        }
+        
+        .console-content .form-group {
+            display: flex;
+        }
+        
+        .console-content .form-group input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 2px solid #333;
+            background-color: #222;
+            color: #fff;
+            font-size: 18px;
+            border-radius: 10px;
+        }
+        
+        .console-content .form-group input[type="text"]:focus {
+            outline: none;
+            border-color: #555;
+        }
+        
+        .console-content .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 10px;
+            margin-left: 10px;
+            outline: none;
+        }
+        
+        .console-content .form-group button:hover {
+            background-color: #286090;
+        }
+        
+        #autoway-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 40px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 1000;
+            width: 400px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #autoway-modal h2 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        #autoway-modal .form-group {
+            margin-bottom: 20px;
+        }
+
+        #autoway-modal .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #autoway-modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #111;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        #autoway-modal .form-group input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        #autoway-modal .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        #autoway-modal .form-group button:hover {
+            background-color: #286090;
+        }
+
+        #autoway-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 20px;
+        }
+
+        #autoway-modal .close-btn:hover {
+            color: #fff;
+        }
+        
+        #follow-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 40px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 1000;
+            width: 400px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #follow-modal h2 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        #follow-modal .form-group {
+            margin-bottom: 20px;
+        }
+
+        #follow-modal .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #follow-modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #111;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        #follow-modal .form-group input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        #follow-modal .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        #follow-modal .form-group button:hover {
+            background-color: #286090;
+        }
+
+        #follow-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 20px;
+        }
+
+        #follow-modal .close-btn:hover {
+            color: #fff;
+        }
+        
+        #get-location-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 40px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 1000;
+            width: 400px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #get-location-modal h2 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        #get-location-modal .form-group {
+            margin-bottom: 20px;
+        }
+
+        #get-location-modal .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #get-location-modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #111;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        #get-location-modal .form-group input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        #get-location-modal .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        #get-coordinates-modal .form-group button:hover {
+            background-color: #286090;
+        }
+
+        #get-location-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 20px;
+        }
+
+        #get-location-modal .close-btn:hover {
+            color: #fff;
+        }
+        
+        #search-npc-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #222;
+            padding: 40px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            z-index: 1000;
+            width: 400px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        #search-npc-modal h2 {
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        #search-npc-modal .form-group {
+            margin-bottom: 20px;
+        }
+
+        #search-npc-modal .form-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        #search-npc-modal .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #333;
+            background-color: #111;
+            color: #fff;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        #search-npc-modal .form-group input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        #search-npc-modal .form-group button {
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 18px;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+
+        #search-npc-modal .form-group button:hover {
+            background-color: #286090;
+        }
+
+        #search-npc-modal .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 20px;
+        }
+
+        #search-npc-modal .close-btn:hover {
+            color: #fff;
+        }
+
+        .hud-content { 
+            width: 500px;
+            text-align: center;
+        }
+        
+        .theme-selector label {
+          display: block;
+          margin-bottom: 10px;
+          color: #fff;
+          font-weight: bold;
+          font-size: 24px; 
+        }
+        
+        .color-options {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+          gap: 10px;
+        }
+        
+        .color-options input[type="radio"] {
+          display: none;
+        }
+        
+        .color-options label {
+          height: 40px;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        
+        .color-options label[for="color-black"] {
+          background-color: #111; 
+        }
+        
+        .color-options label[for="color-blue-green"] {
+          background-image: linear-gradient(to right, blue, green);
+        }
+        
+        .color-options label[for="color-darkblue"] {
+          background-image: linear-gradient(to right, darkblue, #222);
+        }
+        
+        .color-options label[for="color-red-orange"] {
+          background-image: linear-gradient(to right, red, orange);
+        }
+        
+        .color-options label[for="color-purple-blue"] {
+          background-image: linear-gradient(to right, purple, blue);
+        }
+        
+        .color-options label[for="color-yellow-green"] {
+          background-image: linear-gradient(to right, yellow, green);
+        }
+        
+        .color-options label[for="color-orange-red"] {
+          background-image: linear-gradient(to right, darkred, #500000); 
+        }
+
+        .color-options label[for="color-gold-yellow"] {
+          background-image: linear-gradient(to right, gold, yellow);
+        }
+
+        .color-options label[for="color-cyan-blue"] {
+          background-image: linear-gradient(to right, cyan, blue);
+        }
+
+        .color-options label[for="color-lime-green"] {
+          background-image: linear-gradient(to right, lime, green);
+        }
+
+        .color-options label[for="color-pink-purple"] {
+          background-image: linear-gradient(to right, pink, purple);
+        }
+
+        .color-options label[for="color-teal-blue"] {
+          background-image: linear-gradient(to right, teal, blue);
+        }
+
+        .color-options label[for="color-brown-beige"] {
+          background-image: linear-gradient(to right, brown, beige);
+        }
+
+        .color-options label[for="color-gray-black"] {
+          background-image: linear-gradient(to right, gray, black);
+        }
+        
+        .color-options input[type="radio"]:checked + label {
+            border: 2px solid white; 
+        }
+        
+        .gradient-blue-green .custom-element {
+            background-image: linear-gradient(to right, blue, green) !important;
+        }
+        
+        .gradient-darkblue .custom-element {
+            background-image: linear-gradient(to right, darkblue, #222) !important; 
+        }
+        
+        .gradient-red-orange .custom-element {
+            background-image: linear-gradient(to right, red, orange) !important; 
+        }
+        
+        .gradient-purple-blue .custom-element {
+            background-image: linear-gradient(to right, purple, blue) !important; 
+        }
+        
+        .gradient-yellow-green .custom-element {
+            background-image: linear-gradient(to right, yellow, green) !important; 
+        }
+        
+        .gradient-orange-red .custom-element {
+            background-image: linear-gradient(to right, darkred, #500000) !important; 
+        }
+        
+        .gradient-gold-yellow .custom-element {
+            background-image: linear-gradient(to right, gold, yellow) !important;
+        }
+        
+        .gradient-cyan-blue .custom-element {
+            background-image: linear-gradient(to right, cyan, blue) !important;
+        }
+        
+        .gradient-lime-green .custom-element {
+            background-image: linear-gradient(to right, lime, green) !important;
+        }
+        
+        .gradient-pink-purple .custom-element {
+            background-image: linear-gradient(to right, pink, purple) !important;
+        }
+        
+        .gradient-teal-blue .custom-element {
+            background-image: linear-gradient(to right, teal, blue) !important;
+        }
+        
+        .gradient-brown-beige .custom-element {
+            background-image: linear-gradient(to right, brown, beige) !important;
+        }
+        
+        .gradient-gray-black .custom-element {
+            background-image: linear-gradient(to right, gray, black) !important;
+        }
+    </style>
+</head>
+<body class="dark">
+<div class="container">
+    <div class="sidebar">
+        <h2>Entity Client</h2>
+        <ul>
+            <li id="home">Home</li>
+            <li id="misc">Misc</li>
+            <li id="console">Console</li>
+            <li id="hud">HUD</li>
+        </ul>
+    </div>
+    <div class="content">
+        <div class="home-content">
+            <form id="start-form">
+                <div class="form-group">
+                    <label for="username">Никнейм</label>
+                    <input type="text" id="username" name="username" placeholder="Введите ник бота">
+                </div>
+                <div class="form-group">
+                    <label for="ip-address">IP Адрес</label>
+                    <input type="text" id="ip-address" name="ip_address" placeholder="Введите IP адрес">
+                </div>
+                <div class="form-group">
+                    <label for="port">Порт</label>
+                    <input type="text" id="port" name="port" placeholder="Введите порт">
+                </div>
+                <div class="form-group">
+                    <button type="button" class="custom-element" id="start-button">Запуск</button>
+                </div>
+            </form>
+            <div id="output-status"></div>
+            <div id="output-log"></div>
+        </div>
+        <div class="misc-content">
+            <ul class="function-list">
+                <li class="custom-element"id="anti-afk">Anti-AFK</li>
+                <li class="custom-element"id="autocasino">AutoCasino</li>
+                <li class="custom-element"id="autoway">AutoWay</li>
+                <li class="custom-element"id="click-on-gui" class="custom-element">Click On Gui</li>
+                <li class="custom-element">Follow</li>
+                <li class="custom-element"id="get-location">Get Location</li>
+            </ul>
+        </div>
+        <div class="console-content" style="display: none;">
+            <div id="console-log"></div> 
+            <div class="form-group"> 
+                <input type="text" id="console-input" placeholder="Введите сообщение...">
+                <button class="custom-element" id="console-send-button">Отправить</button> 
+            </div>
+        </div>
+        <div class="hud-content style="display: none;">
+            <div class="theme-selector">
+                <label for="theme-select">Цвет клиента:</label>
+                <div class="color-options">
+                    <input type="radio" id="color-black" name="theme" value="color-black" checked>
+                    <label for="color-black" class="color-black"></label>
+    
+                    <input type="radio" id="color-blue-green" name="theme" value="gradient-blue-green">
+                    <label for="color-blue-green" class="gradient-blue-green"></label>
+    
+                    <input type="radio" id="color-darkblue" name="theme" value="gradient-darkblue">
+                    <label for="color-darkblue" class="gradient-darkblue"></label>
+    
+                    <input type="radio" id="color-red-orange" name="theme" value="gradient-red-orange">
+                    <label for="color-red-orange" class="gradient-red-orange"></label>
+    
+                    <input type="radio" id="color-purple-blue" name="theme" value="gradient-purple-blue">
+                    <label for="color-purple-blue" class="gradient-purple-blue"></label>
+    
+                    <input type="radio" id="color-yellow-green" name="theme" value="gradient-yellow-green">
+                    <label for="color-yellow-green" class="gradient-yellow-green"></label>
+    
+                    <input type="radio" id="color-orange-red" name="theme" value="gradient-orange-red">
+                    <label for="color-orange-red" class="gradient-orange-red"></label>
+    
+                    <input type="radio" id="color-gold-yellow" name="theme" value="gradient-gold-yellow">
+                    <label for="color-gold-yellow" class="gradient-gold-yellow"></label>
+    
+                    <input type="radio" id="color-cyan-blue" name="theme" value="gradient-cyan-blue">
+                    <label for="color-cyan-blue" class="gradient-cyan-blue"></label>
+    
+                    <input type="radio" id="color-lime-green" name="theme" value="gradient-lime-green">
+                    <label for="color-lime-green" class="gradient-lime-green"></label>
+    
+                    <input type="radio" id="color-pink-purple" name="theme" value="gradient-pink-purple">
+                    <label for="color-pink-purple" class="gradient-pink-purple"></label>
+    
+                    <input type="radio" id="color-teal-blue" name="theme" value="gradient-teal-blue">
+                    <label for="color-teal-blue" class="gradient-teal-blue"></label>
+    
+                    <input type="radio" id="color-brown-beige" name="theme" value="gradient-brown-beige">
+                    <label for="color-brown-beige" class="gradient-brown-beige"></label>
+    
+                    <input type="radio" id="color-gray-black" name="theme" value="gradient-gray-black">
+                    <label for="color-gray-black" class="gradient-gray-black"></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="afk-modal">
+    <span class="close-btn" onclick="closeModal()">×</span>
+    <h2>Anti-AFK</h2>
+    <div class="form-group">
+        <label for="afk-cycles">Количество циклов</label>
+        <input type="number" id="afk-cycles" min="1" value="10">
+    </div>
+    <div class="form-group">
+        <button class="custom-element" id="afk-start-button">Запуск</button>
+    </div>
+</div>
+<div id="click-on-gui-modal">
+    <span class="close-btn" onclick="closeClickOnGuiModal()">×</span>
+    <h2>Click On Gui</h2>
+    <div class="form-group">
+        <label for="bot-slot">Введите номер слота</label>
+        <input type="text" id="bot-slot">
+    </div>
+    <div class="form-group">
+        <button class="custom-element" id="click-on-gui-start-button">Нажать</button>
+    </div>
+</div>
+
+<div id="search-npc-modal">
+    <span class="close-btn" onclick="closeSearchNpcModal()">×</span>
+    <h2>Search NPC</h2>
+    <div class="form-group">
+        <button class="custom-element" id="search-npc-start-button">Нажать</button>
+    </div>
+</div>
+
+<div id="autoway-modal">
+    <span class="close-btn" onclick="closeAutowayModal()">×</span>
+    <h2>AutoWay</h2>
+    <div class="form-group">
+        <label for="autoway-x">Координата X:</label>
+        <input type="number" id="autoway-x">
+    </div>
+    <div class="form-group">
+        <label for="autoway-z">Координата Z:</label>
+        <input type="number" id="autoway-z">
+    </div>
+    <div class="form-group">
+        <button class="custom-element" id="autoway-start-button">Запуск</button>
+    </div>
+</div>
+<div id="follow-modal">
+    <span class="close-btn" onclick="closeFollowModal()">×</span>
+    <h2>Follow Player</h2>
+    <div class="form-group">
+        <label for="follow-player-name">Ник игрока</label>
+        <input type="text" id="follow-player-name">
+    </div>
+    <div class="form-group">
+        <button type="button" class="custom-element" id="follow-start-button">Запуск</button>
+        <button type="button" class="custom-element" id="follow-stop-button" style="display: none;">Остановить</button>
+    </div>
+</div>
+<div id="get-location-modal">
+    <span class="close-btn" onclick="closeGetLocationModal()">×</span>
+    <h2>Get Location</h2>
+    <div class="form-group">
+        <label for="player-name">Ник игрока</label>
+        <input type="text" id="player-name">
+    </div>
+    <div class="form-group">
+        <button class="custom-element" id="get-location-button">Запуск</button>
+    </div>
+</div>
+<script>
+    document.addEventListener('contextmenu', function(event) {
+        event.preventDefault();
+    });
+    
+    home.classList.add('selected');
+</script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const contentDivs = document.querySelectorAll('.content > div');
+    const sidebarItems = document.querySelectorAll('.sidebar li');
+    let botStarted = false;
+
+    sidebarItems.forEach(item => {
+      item.addEventListener('click', function () {
+        const id = this.id;
+
+    if (id === 'console' && !botStarted) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Bot Error',
+        text: 'Сначала запустите бота!',
+      });
+      return;
+    }
+    
+    if (id === 'hud' && !isPremium) {
+      Swal.fire({
+        title: 'Premium Function',
+        text: 'Для использования этой функции требуется Premium подписка!',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Купить Premium',
+        cancelButtonText: 'Отмена'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = 'https://funpay.com/users/6829696/';
+        }
+      });
+      return;
+    }
+
+        contentDivs.forEach(div => {
+          if (div.classList.contains(id + '-content')) {
+            div.style.display = 'block';
+          } else {
+            div.style.display = 'none';
+          }
+        });
+        sidebarItems.forEach(item => {
+          item.classList.remove('selected');
+        });
+        this.classList.add('selected');
+      });
+    });
+
+    const startButton = document.getElementById('start-button');
+    let lastClickTime = 0;
+    const throttleTime = 2500;
+
+    startButton.addEventListener('click', () => {
+        const now = new Date().getTime();
+        if (now - lastClickTime < throttleTime) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Too many requests',
+                text: 'Пожалуйста, повторите попытку позже.',
+            });
+            return;
+        }
+            
+        lastClickTime = now;
+        const username = document.getElementById('username').value;
+        const ipAddress = document.getElementById('ip-address').value;
+        const port = document.getElementById('port').value;
+
+    if (!username || !ipAddress || !port) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'Заполните все поля.',
+        });
+        return;
+    }
+    
+    if (isNaN(port)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'Порт должен быть числом.',
+        });
+        return;
+    }
+    
+    if (port.length < 4) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'Порт некорректный.',
+        });
+        return;
+    }
+    
+    if (username.length < 3) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'Никнейм некорректный.',
+        });
+        return;
+    }
+    
+    if (ipAddress.length < 4) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'IP-адрес некорректный.',
+        });
+        return;
+    }
+
+    const specialChars = /[@#^$%&*()_\[\]{}|~!+\\\/=:;"'<>?,]/;
+    const whitespace = /\s/;
+    
+    if (specialChars.test(username) || specialChars.test(ipAddress)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'Специальные символы запрещены.',
+        });
+        return;
+    }
+    
+    if (whitespace.test(username) || whitespace.test(ipAddress) || whitespace.test(port)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Input Error',
+            text: 'Пробелы запрещены.',
+        });
+        return;
+    }
+
+        if (botStarted) {
+            fetch('http://127.0.0.1:5000/stop-bot', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                startButton.textContent = 'Запуск';
+                botStarted = false;
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Bot Stopped',
+                    text: 'Бот был успешно остановлен.',
+                });
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Ошибка при остановке бота.',
+                });
+            });
+        } else {
+            fetch('http://127.0.0.1:5000/start-bot', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username,
+                    ip_address: ipAddress,
+                    port: port,
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                startButton.textContent = 'Остановить';
+                botStarted = true;
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Bot Started',
+                    text: 'Бот был успешно запущен.',
+                });
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Неизвестная ошибка.',
+                });
+            });
+        }
+    });
+
+    const afkButton = document.getElementById('anti-afk');
+    const afkModal = document.getElementById('afk-modal');
+    const sendMessage = document.getElementById('send-message-modal');
+    const afkStartButton = document.getElementById('afk-start-button');
+
+    afkButton.addEventListener('click', () => {
+        if (!botStarted) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bot Error',
+                text: 'Запустите бота перед использованием этой функции.',
+            });
+            return;
+        }
+        afkModal.style.display = 'block';
+    });
+
+    afkStartButton.addEventListener('click', () => {
+        const cycles = document.getElementById('afk-cycles').value;
+        fetch('http://127.0.0.1:5000/start-antiafk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                cycles: cycles,
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            Swal.fire({
+                icon: 'success',
+                title: 'Anti-AFK Started',
+                text: 'Anti-AFK был успешно запущен!',
+            });
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Неизвестная ошибка.',
+            });
+        });
+        afkModal.style.display = 'none';
+    });
+
+    const clickOnGuiButton = document.getElementById('click-on-gui');
+    const clickOnGuiModal = document.getElementById('click-on-gui-modal');
+    const clickOnGuiStartButton = document.getElementById('click-on-gui-start-button');
+    
+    clickOnGuiButton.addEventListener('click', () => {
+        if (!botStarted) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bot Error',
+                text: 'Запустите бота перед использованием этой функции.',
+            });
+            return;
+        }
+        clickOnGuiModal.style.display = 'block';
+    });
+
+    clickOnGuiStartButton.addEventListener('click', () => {
+        const botSlot = parseInt(document.getElementById('bot-slot').value); 
+    
+        if (isNaN(botSlot)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Input Error',
+                text: 'Пожалуйста, введите корректный номер слота.',
+            });
+            return; 
+        }
+    
+        fetch('http://127.0.0.1:5000/click_on_gui', { 
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ bot_slot: botSlot }),
+        })
+        .then(response => {
+            if (response.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Click On Gui',
+                    text: 'Бот кликнул по слоту ' + botSlot + '.',
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Не удалось выполнить клик.',
+                });
+            }
+        });
+        document.getElementById('bot-slot').value = '';
+    });
+
+    const autowayButton = document.getElementById('autoway');
+    const autowayModal = document.getElementById('autoway-modal');
+    const autowayStartButton = document.getElementById('autoway-start-button');
+
+    autowayButton.addEventListener('click', () => {
+        if (!botStarted) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bot Error',
+                text: 'Запустите бота перед использованием этой функции.',
+            });
+            return;
+        }
+        autowayModal.style.display = 'block';
+    });
+
+    autowayStartButton.addEventListener('click', () => {
+        const x = parseInt(document.getElementById('autoway-x').value);
+        const z = parseInt(document.getElementById('autoway-z').value);
+
+        if (isNaN(x) || isNaN(z)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Input Error',
+                text: 'Пожалуйста, введите корректные координаты X и Z.',
+            });
+            return;
+        }
+
+        fetch('http://127.0.0.1:5000/start-autoway', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ x: x, z: z }),
+        })
+            .then(response => {
+                if (response.ok) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'AutoWay started',
+                        text: 'Бот начал движение к указанным координатам.',
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Bot Error',
+                        text: 'Не удалось запустить AutoWay.',
+                    });
+                }
+            });
+        autowayModal.style.display = 'none';
+    });
+    
+    const consoleLog = document.getElementById('console-log');
+    const consoleInput = document.getElementById('console-input');
+    const consoleSendButton = document.getElementById('console-send-button');
+    
+    function logToConsole(message) {
+        const messageElement = document.createElement('p');
+        messageElement.textContent = message;
+        consoleLog.appendChild(messageElement);
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+    }
+    
+    consoleSendButton.addEventListener('click', () => {
+        const message = consoleInput.value.trim();
+        if (message !== "") {
+            fetch('http://127.0.0.1:5000/console_message', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: message})
+            });
+            consoleInput.value = ""; 
+        }
+    });
+
+    function checkForMessages() {
+        if (botStarted) {
+            fetch('http://127.0.0.1:5000/get_messages')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.text !== '') {
+                        logToConsole(data.text);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch Error:', error);
+                });
+        }
+    }
+    
+    const followButton = document.querySelector('.function-list li:nth-child(5)');
+    const followModal = document.getElementById('follow-modal');
+    const followStartButton = document.getElementById('follow-start-button');
+    const followStopButton = document.getElementById('follow-stop-button');
+    let isFollowing = false; 
+    
+    followButton.addEventListener('click', () => {
+        if (!botStarted) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bot Error',
+                text: 'Запустите бота перед использованием этой функции.',
+            });
+            return;
+        }
+        followModal.style.display = 'block';
+    });
+    
+    followStartButton.addEventListener('click', () => {
+        const playerName = document.getElementById('follow-player-name').value;
+    
+        if (playerName.trim() === "") {
+            Swal.fire({
+                icon: 'error',
+                title: 'Input Error',
+                text: 'Введите ник игрока.',
+            });
+            return;
+        }
+    
+        fetch('http://127.0.0.1:5000/start-follow', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ player: playerName }),
+        })
+        .then(response => {
+            if (response.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Follow Started',
+                    text: 'Бот начал движение за игроком ' + playerName + '.',
+                });
+                isFollowing = true;
+                followStartButton.style.display = 'none'; 
+                followStopButton.style.display = 'block'; 
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Failed to start following.',
+                });
+            }
+        });
+    });
+    
+    followStopButton.addEventListener('click', () => {
+        fetch('http://127.0.0.1:5000/stop-follow', {
+            method: 'POST',
+        })
+        .then(response => {
+            if (response.ok) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Follow Stopped',
+                    text: 'Бот прекратил движение.',
+                });
+                isFollowing = false;
+                followStartButton.style.display = 'block'; 
+                followStopButton.style.display = 'none'; 
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Bot Error',
+                    text: 'Неизвестная ошибка.',
+                });
+            }
+        });
+    });
+    
+    const getLocationButton = document.querySelector('.function-list li:nth-child(6)'); 
+    const getLocationModal = document.getElementById('get-location-modal');
+    const getPlayerLocationButton = document.getElementById('get-location-button');
+    
+    getLocationButton.addEventListener('click', () => {
+        if (!botStarted) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Bot Error',
+                text: 'Запустите бота перед использованием этой функции.',
+            });
+            return;
+        }
+        getLocationModal.style.display = 'block';
+    });
+
+    getPlayerLocationButton.addEventListener('click', () => {
+        const playerName = document.getElementById('player-name').value;
+
+        if (playerName.trim() === "") {
+            Swal.fire({
+                icon: 'error',
+                title: 'Input Error',
+                text: 'Введите имя игрока.',
+            });
+            return;
+        }
+
+        fetch('http://127.0.0.1:5000/get-coordinates', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ player: playerName }),
+        })
+            .then(response => response.json()) 
+            .then(data => { 
+                if (data.success) { 
+                   Swal.fire({
+                        icon: 'success',
+                        title: 'Локация игрока',
+                        text: data.message,
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Не удалось получить координаты.',
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Неизвестная ошибка.', 
+                });
+            });
+
+        getLocationModal.style.display = 'none'; 
+    });
+
+    const colorOptions = document.querySelectorAll('.color-options input[type="radio"]');
+    const body = document.body; 
+    const sidebar = document.querySelector('.sidebar');
+    const formGroups = document.querySelectorAll('.form-group');
+    const consoleContent = document.querySelector('.console-content');
+    const content = document.querySelector('.content');
+    
+    colorOptions.forEach(option => {
+        option.addEventListener('change', function() {
+            const selectedGradient = this.value;
+    
+            body.className = '';
+            sidebar.className = 'sidebar';
+            content.className = 'content';
+
+            body.classList.add(selectedGradient);
+            sidebar.classList.add(selectedGradient);
+            content.classList.add(selectedGradient);
+    
+            formGroups.forEach(formGroup => {
+                formGroup.className = 'form-group';
+                formGroup.classList.add(selectedGradient);
+            });
+    
+            consoleContent.className = 'console-content';
+            consoleContent.classList.add(selectedGradient);
+        });
+    });
+    
+    let isPremium;
+
+    fetch('http://127.0.0.1:5000/check_premium')
+    .then(response => response.json())
+    .then(data => {
+        isPremium = data.isPremium; 
+    })
+    .catch(error => console.error('Fetch Error:', error));
+
+
+    setInterval(checkForMessages, 750);
+    
+    function closeSearchNpcModal() {
+        searchNpcModal.style.display = 'none';
+    }
+    
+    function closeGetLocationModal() {
+        getLocationModal.style.display = 'none';
+    }
+
+    function closeFollowModal() {
+        followModal.style.display = 'none';
+    }
+
+    function closeAutowayModal() {
+        autowayModal.style.display = 'none';
+    }
+
+    function SpammerModal() {
+        autowayModal.style.display = 'none';
+    }
+
+    function closeClickOnGuiModal() {
+        clickOnGuiModal.style.display = 'none';
+    }
+
+    function closeModal() {
+        afkModal.style.display = 'none';
+    }
+
+    function closeSendMessageModal() {
+        sendMessage.style.display = 'none';
+    }
+
+</script>
+</body>
+</html>
+"""#line:1591
+app =Flask (__name__ )#line:1593
+CORS (app )#line:1594
+bot_started =False #line:1596
+@app .route ('/start-bot',methods =['POST'])#line:1598
+def start_bot_route ():#line:1599
+    global bot_started #line:1600
+    if bot_started :#line:1601
+        return jsonify ({'success':False ,'message':'Бот уже запущен.'})#line:1602
+    OOO0OOOO0OOO0OO00 =request .json #line:1603
+    OOO0000O0O00O0OOO =OOO0OOOO0OOO0OO00 ['username']#line:1604
+    O0OO00OOOO000OOO0 =OOO0OOOO0OOO0OO00 ['ip_address']#line:1605
+    O000OO00O00O00000 =OOO0OOOO0OOO0OO00 ['port']#line:1606
+    O0OOO000OO00000O0 =Thread (target =start_bot ,args =(OOO0000O0O00O0OOO ,O0OO00OOOO000OOO0 ,O000OO00O00O00000 ))#line:1607
+    O0OOO000OO00000O0 .start ()#line:1608
+    bot_started =True #line:1609
+    return jsonify ({'success':True })#line:1610
+@app .route ('/stop-bot',methods =['POST'])#line:1612
+def stop_bot_route ():#line:1613
+    global bot_started ,bot #line:1614
+    if not bot_started :#line:1615
+        return jsonify ({'success':False ,'message':'Бот не запущен.'})#line:1616
+    OOO0O000OOO0OOOOO =Thread (target =stop_bot )#line:1617
+    OOO0O000OOO0OOOOO .start ()#line:1618
+    bot_started =False #line:1619
+    return jsonify ({'success':True })#line:1620
+@app .route ('/search-npc',methods =['POST'])#line:1622
+def search_npc_route ():#line:1623
+    O000O00O0000O0O00 =Thread (target =None ,args =())#line:1624
+    O000O00O0000O0O00 .start ()#line:1625
+    return jsonify ({'success':True })#line:1626
+@app .route ('/start-antiafk',methods =['POST'])#line:1628
+def start_antiafk_route ():#line:1629
+    OOO0OO00OOO000000 =request .json #line:1630
+    OOO000OO0O000O000 =int (OOO0OO00OOO000000 ['cycles'])#line:1631
+    OO0OO0O0OO000OO00 =Thread (target =start_AntiAFK ,args =(OOO000OO0O000O000 ,))#line:1632
+    OO0OO0O0OO000OO00 .start ()#line:1633
+    return jsonify ({'success':True })#line:1634
+@app .route ('/click_on_gui',methods =['POST'])#line:1636
+def click_on_gui_route ():#line:1637
+    O0O0O00OO00O00OO0 =request .json #line:1638
+    OOOO0OO0O00O000O0 =int (O0O0O00OO00O00OO0 .get ('bot_slot',0 ))#line:1639
+    O0OOO00OOOO0000O0 =Thread (target =click_on_gui ,args =(OOOO0OO0O00O000O0 ,))#line:1640
+    O0OOO00OOOO0000O0 .start ()#line:1641
+    return jsonify ({'success':True })#line:1642
+@app .route ('/start-autoway',methods =['POST'])#line:1644
+def start_autoway_route ():#line:1645
+    OO0OO0OOO0O00O00O =request .json #line:1646
+    OOO0O0O0000O000O0 =int (OO0OO0OOO0O00O00O ['x'])#line:1647
+    OO0OO000O00O0OOOO =int (OO0OO0OOO0O00O00O ['z'])#line:1648
+    OOO00000O0O0OOO0O =Thread (target =autoway ,args =(OOO0O0O0000O000O0 ,OO0OO000O00O0OOOO ,))#line:1649
+    OOO00000O0O0OOO0O .start ()#line:1650
+    return jsonify ({'success':True })#line:1651
+@app .route ('/start-spammer',methods =['POST'])#line:1653
+def start_spammer_route ():#line:1654
+    O00OOO0OOO00OO0OO =request .json #line:1655
+    O0O0OOOOOO000OOOO =int (O00OOO0OOO00OO0OO ['cmd'])#line:1656
+    O0O0O00OO00OO0O00 =int (O00OOO0OOO00OO0OO ['text'])#line:1657
+    OOO00O0O0OO00O00O =int (O00OOO0OOO00OO0OO ['cooldown'])#line:1658
+    O0O0OOOOOO0O0OOO0 =Thread (target =start_spammer ,args =(O0O0OOOOOO000OOOO ,O0O0O00OO00OO0O00 ,OOO00O0O0OO00O00O ,))#line:1659
+    O0O0OOOOOO0O0OOO0 .start ()#line:1660
+    return jsonify ({'success':True })#line:1661
+@app .route ('/check_premium',methods =['GET'])#line:1663
+def check_premium_route ():#line:1664
+    O0O0O0OOO0O0O00OO =get_hwid ()#line:1665
+    if O0O0O0OOO0O0O00OO :#line:1666
+        OOO0O0OO00OOOO00O =hash_hwid (O0O0O0OOO0O0O00OO )#line:1667
+        O00OO0O00O0000OOO =check_premium (OOO0O0OO00OOOO00O )#line:1668
+        return jsonify ({'isPremium':O00OO0O00O0000OOO })#line:1669
+    else :#line:1670
+        return jsonify ({'isPremium':False })#line:1671
+@app .route ('/start-follow',methods =['POST'])#line:1673
+def start_follow_route ():#line:1674
+    global isFollowing ,follow_thread #line:1675
+    if isFollowing :#line:1676
+        return jsonify ({'success':False ,'message':'Bot is already following.'})#line:1677
+    OO000OOOO000OO000 =request .json #line:1679
+    O000O00O0000OO0OO =OO000OOOO000OO000 ['player']#line:1680
+    follow_thread =Thread (target =follow ,args =(O000O00O0000OO0OO ,))#line:1681
+    follow_thread .start ()#line:1682
+    isFollowing =True #line:1683
+    return jsonify ({'success':True })#line:1684
+@app .route ('/stop-follow',methods =['POST'])#line:1686
+def stop_follow_route ():#line:1687
+    global isFollowing #line:1688
+    if not isFollowing :#line:1689
+        return jsonify ({'success':False ,'message':'Bot is not currently following.'})#line:1690
+    isFollowing =False #line:1692
+    bot_unfollow ()#line:1693
+    return jsonify ({'success':True })#line:1695
+@app .route ('/get-coordinates',methods =['POST'])#line:1697
+def get_coordinates_route ():#line:1698
+    O0OOO0OO0OO000O00 =request .json #line:1699
+    O0OOO0OOO00O00000 =O0OOO0OO0OO000O00 ['player']#line:1700
+    O0OOO00O00OO0OOOO =Thread (target =get_coordinates ,args =(O0OOO0OOO00O00000 ,))#line:1701
+    O0OOO00O00OO0OOOO .start ()#line:1702
+    return jsonify ({'success':True })#line:1703
+@app .route ('/console_message',methods =['POST'])#line:1705
+def console_message_route ():#line:1706
+    O0000OO000000O0O0 =request .get_json ()#line:1707
+    if O0000OO000000O0O0 and 'message'in O0000OO000000O0O0 :#line:1708
+        O00000000OOOOOOO0 =O0000OO000000O0O0 ['message']#line:1709
+        O000OO0OO0O00OO0O =Thread (target =handle_console_message ,args =(O00000000OOOOOOO0 ,))#line:1710
+        O000OO0OO0O00OO0O .start ()#line:1711
+    return jsonify ({'success':True })#line:1712
+@app .route ('/get_messages')#line:1714
+def get_messages ():#line:1715
+    try :#line:1716
+        OO0OO0O00OOO00000 =message_queue .get (timeout =0.1 )#line:1717
+        return jsonify ({'text':OO0OO0O00OOO00000 .get ('text','')})#line:1718
+    except Empty :#line:1719
+        return jsonify ({'text':''})#line:1720
+def handle_console_message (O00O0O0OO00OO0O0O ):#line:1722
+    global bot #line:1723
+    if bot :#line:1724
+        bot .chat (O00O0O0OO00OO0O0O )#line:1725
+def get_bot_message ():#line:1727
+    global last_bot_message #line:1728
+    return last_bot_message #line:1729
+def start_AntiAFK (OO0000O0O0O00O00O ):#line:1731
+    run (bot_antiafk (OO0000O0O0O00O00O ))#line:1732
+def autoway (OO0OO000O000OO000 ,O00OOO0O0O0OO0O00 ):#line:1734
+    run (bot_autoway (OO0OO000O000OO000 ,O00OOO0O0O0OO0O00 ))#line:1735
+def follow (OOOO000O0000000OO ):#line:1737
+    run (bot_follow (OOOO000O0000000OO ))#line:1738
+def click_on_gui (O0000OO0OOOO0OO0O ):#line:1740
+    run (bot_click_on_gui (O0000OO0OOOO0OO0O ))#line:1741
+def get_coordinates (OOOO0000OOOOOO0OO ):#line:1743
+    run (bot_get_coordinates (OOOO0000OOOOOO0OO ))#line:1744
+def start_spammer (OOO000O00O00O0OO0 ,O0O000O00000O0000 ,OO00OO0OOOOOO000O ):#line:1746
+    run (bot_spammer (OOO000O00O00O0OO0 ,O0O000O00000O0000 ,OO00OO0OOOOOO000O ))#line:1747
+def start_bot (OOOO0O0O0000OO000 ,OO000OO0OO0O0O0O0 ,O0OOO0OO0000OO000 ):#line:1749
+    run (start_bot_async (OOOO0O0O0000OO000 ,OO000OO0OO0O0O0O0 ,O0OOO0OO0000OO000 ))#line:1750
+def stop_bot ():#line:1752
+    run (bot_disconnect ())#line:1753
+def bot_open_auction ():#line:1755
+    pass #line:1756
+async def start_bot_async (O000OO0OOO000000O ,OOO0000OO0OO0000O ,OO00O0OO00OO0000O ):#line:1758
+    global bot #line:1759
+    bot =mineflayer .createBot ({'username':O000OO0OOO000000O ,'host':OOO0000OO0OO0000O ,'port':int (OO00O0OO00OO0000O ),'hideErrors':True })#line:1765
+    bot .loadPlugin (pathfinder .pathfinder )#line:1766
+    @On (bot ,'message')#line:1768
+    def OOOO0O0O0O00O00O0 (OOOOOOO0O0O000O0O ,OO0OOO0O0O00O0OOO ,*OOOO0O0OO0OO00O00 ):#line:1769
+        global needed_item #line:1770
+        if OO0OOO0O0O00O0OOO .extra is None :#line:1771
+            return False #line:1772
+        O00OOO0O000O0OOO0 ={'text':''}#line:1773
+        if OO0OOO0O0O00O0OOO .extra is not None :#line:1774
+            for O000000O0OOOO0OO0 in OO0OOO0O0O00O0OOO .extra :#line:1775
+                if hasattr (O000000O0OOOO0OO0 ,'text'):#line:1776
+                    O00OOO0O000O0OOO0 ['text']+=O000000O0OOOO0OO0 .text #line:1777
+        message_queue .put (O00OOO0O000O0OOO0 )#line:1778
+async def bot_antiafk (OOO0O0O0O0000O00O ):#line:1780
+    for _OO00O000OOOO00O00 in range (OOO0O0O0O0000O00O ):#line:1781
+        bot .setControlState ('right',True )#line:1782
+        time .sleep (0.5 )#line:1783
+        bot .setControlState ('right',False )#line:1784
+        time .sleep (0.5 )#line:1785
+        bot .setControlState ('left',True )#line:1786
+        time .sleep (0.5 )#line:1787
+        bot .setControlState ('left',False )#line:1788
+        time .sleep (0.5 )#line:1789
+async def bot_get_coordinates (O00O00OOO000OO000 ):#line:1791
+    if O00O00OOO000OO000 in bot .players :#line:1792
+        OOOO00000OOO0O000 =bot .players [O00O00OOO000OO000 ].entity .position #line:1793
+        OO0O00O0OOOO0O0OO ="{:.1f}".format (OOOO00000OOO0O000 .x )#line:1794
+        OOOO0O0OO0O00OO00 ="{:.1f}".format (OOOO00000OOO0O000 .y )#line:1795
+        O00OOO000O00000O0 ="{:.1f}".format (OOOO00000OOO0O000 .z )#line:1796
+        O0OOO00O00O0OO0OO =f"Локация игрока {O00O00OOO000OO000}: x={OO0O00O0OOOO0O0OO}, y={OOOO0O0OO0O00OO00}, z={O00OOO000O00000O0}"#line:1797
+        return jsonify ({'success':True ,'message':O0OOO00O00O0OO0OO })#line:1798
+    else :#line:1799
+        bot .chat (f"Игрок с именем {O00O00OOO000OO000} не найден либо, не находится в радиусе 4 чанков.")#line:1800
+        return jsonify ({'success':False ,'message':'Игрок не найден.'})#line:1801
+async def bot_tapemouse ():#line:1803
+    if tapemouse_isClicking :#line:1804
+        OO0OOO00O0OO00000 =None #line:1805
+    time .sleep (2 )#line:1807
+    OO0OOO00O0OO00000 =bot .entityAtCursor ()#line:1808
+    if OO0OOO00O0OO00000 is None :#line:1809
+        print ("No entity found at cursor.")#line:1810
+        return #line:1811
+    while True :#line:1813
+        OOO0O0O00OO00O000 =(bot .entity .position .x ,bot .entity .position .y ,bot .entity .position .z )#line:1814
+        O0OOOOO0OOOOO00O0 =(OO0OOO00O0OO00000 .position .x ,OO0OOO00O0OO00000 .position .y ,OO0OOO00O0OO00000 .position .z )#line:1815
+        OO0O0OOOOOOO0OO00 =((OOO0O0O00OO00O000 [0 ]-O0OOOOO0OOOOO00O0 [0 ])**2 +(OOO0O0O00OO00O000 [1 ]-O0OOOOO0OOOOO00O0 [1 ])**2 +(OOO0O0O00OO00O000 [2 ]-O0OOOOO0OOOOO00O0 [2 ])**2 )**0.5 #line:1819
+        if OO0O0OOOOOOO0OO00 <3 :#line:1820
+            bot .lookAt (OO0OOO00O0OO00000 .position )#line:1821
+            bot .useOn (OO0OOO00O0OO00000 )#line:1822
+            bot .lookAt (OO0OOO00O0OO00000 .position )#line:1823
+            bot .attack (OO0OOO00O0OO00000 )#line:1824
+        time .sleep (0.7 )#line:1825
+async def bot_autoway (OOO0O0000OO00OOOO ,O0000000O0O00O000 ,*OO0O0000O0OOO000O ):#line:1827
+    O000O0O0OO0OO00O0 =require ("minecraft-data")(bot .version )#line:1828
+    OOOO0O00OOO0000O0 =pathfinder .Movements (bot ,O000O0O0OO0OO00O0 )#line:1829
+    OOOO0O00OOO0000O0 .allowFreeMotion =True #line:1831
+    OOOO0O00OOO0000O0 .allowSprinting =False #line:1832
+    bot .pathfinder .setMovements (OOOO0O00OOO0000O0 )#line:1834
+    bot .look (uniform (-180 ,180 ),uniform (-90 ,90 ))#line:1836
+    bot .pathfinder .setGoal (pathfinder .goals .GoalNear (OOO0O0000OO00OOOO ,bot .entity .position .y ,O0000000O0O00O000 ,1 ))#line:1837
+    bot .setControlState ('jump',True )#line:1838
+    bot .look (uniform (-180 ,180 ),uniform (-90 ,90 ))#line:1839
+async def bot_follow (OO0O0O0OO000O00O0 ):#line:1841
+    global isFollowing #line:1842
+    if isFollowing :#line:1843
+        O0OO0O0OO00OOOOO0 =require ("minecraft-data")(bot .version )#line:1844
+        O0OO000O000O0OOOO =pathfinder .Movements (bot ,O0OO0O0OO00OOOOO0 )#line:1845
+        O0OO000O000O0OOOO .allowFreeMotion =True #line:1847
+        O0OO000O000O0OOOO .allowSprinting =False #line:1848
+        OO0OOO00O00O000O0 =bot .players [OO0O0O0OO000O00O0 ].entity #line:1850
+        bot .pathfinder .setMovements (O0OO000O000O0OOOO )#line:1851
+        OOOO00000O0O00000 =GoalFollow (OO0OOO00O00O000O0 ,1 )#line:1852
+        bot .pathfinder .setGoal (OOOO00000O0O00000 ,True )#line:1853
+        await sleep (0.1 )#line:1854
+    if not isFollowing :#line:1855
+        bot .pathfinder .setGoal (None )#line:1856
+async def bot_spammer (O00O0OOOOOOO00O0O ,O00OOO0OO000OOOO0 ,O00O0OO0O000OO000 ,*OO0OO00O0OOO00O00 ):#line:1858
+    time .sleep (O00O0OO0O000OO000 )#line:1859
+    O000OOOOO0OO00OO0 =bot .players #line:1860
+    for OO0OOOOO0O0O0OOOO in O000OOOOO0OO00OO0 :#line:1861
+        O0OO0O00O00O000O0 =O000OOOOO0OO00OO0 [OO0OOOOO0O0O0OOOO ]["username"]#line:1862
+        time .sleep (3.5 )#line:1863
+        bot .chat (f'{O00O0OOOOOOO00O0O} {O0OO0O00O00O000O0} {O00OOO0OO000OOOO0}')#line:1864
+def use_on_entity (OOO0OO0OOO0OOO0OO ):#line:1866
+    global target_entity #line:1867
+    try :#line:1868
+        O00O00OOOO0OOO0OO =require ('minecraft-data')(bot .version )#line:1869
+        OO000O0OOOO000000 =pathfinder .Movements (bot ,O00O00OOOO0OOO0OO )#line:1870
+        bot .pathfinder .setMovements (OO000O0OOOO000000 )#line:1871
+        bot .pathfinder .setGoal (pathfinder .goals .GoalNear (OOO0OO0OOO0OOO0OO .position .x ,OOO0OO0OOO0OOO0OO .position .y ,OOO0OO0OOO0OOO0OO .position .z ,1 ))#line:1872
+        target_entity =OOO0OO0OOO0OOO0OO #line:1873
+    except Exception as O000OOOOOOO0OOO0O :#line:1874
+        print (f"Error handling entity: {O000OOOOOOO0OOO0O}")#line:1875
+def bot_unfollow ():#line:1877
+    OO00O0OOOO00OO0O0 =require ("minecraft-data")(bot .version )#line:1878
+    OOO000OOO0O0OO000 =pathfinder .Movements (bot ,OO00O0OOOO00OO0O0 )#line:1879
+    bot .pathfinder .setMovements (OOO000OOO0O0OO000 )#line:1881
+    bot .pathfinder .setGoal (None )#line:1882
+async def bot_click_on_gui (OOOO0O00OOO000O0O ):#line:1884
+    try :#line:1885
+        bot .clickWindow (OOOO0O00OOO000O0O ,0 ,0 )#line:1886
+    except errors .JavaScriptError :#line:1887
+        pass #line:1888
+async def bot_disconnect ():#line:1890
+    bot .quit ()#line:1891
+def get_wmi_data (OOOO000OO00O0OOOO ):#line:1893
+    try :#line:1894
+        OOOO0OOOOO0OOOO0O =check_output (OOOO000OO00O0OOOO ,shell =True ).decode ().split ('\n')[1 ].strip ()#line:1895
+        return OOOO0OOOOO0OOOO0O #line:1896
+    except Exception as O0O000O0O0O0O0O0O :#line:1897
+        print (f"Ошибка при выполнении команды {OOOO000OO00O0OOOO}: {O0O000O0O0O0O0O0O}")#line:1898
+        return None #line:1899
+def get_hwid ():#line:1901
+    OO00OO0000OOO00OO =get_wmi_data ('wmic baseboard get serialnumber')#line:1902
+    O0O0OO00O00000O00 =get_wmi_data ('wmic cpu get processorid')#line:1903
+    OO00OOOO000O0O0O0 =get_wmi_data ('wmic diskdrive get serialnumber')#line:1904
+    OOO00000OOO0O0OOO =get_wmi_data ('wmic bios get serialnumber')#line:1905
+    OOO00OOOO0000OO0O =get_wmi_data ('wmic os get serialnumber')#line:1906
+    O00000O0OOO0OO0OO =f"{OO00OO0000OOO00OO}{O0O0OO00O00000O00}{OO00OOOO000O0O0O0}{OOO00000OOO0O0OOO}{OOO00OOOO0000OO0O}"#line:1908
+    return O00000O0OOO0OO0OO #line:1909
+def hash_hwid (OO0OO00OO0O0OO0OO ):#line:1911
+    OO0O0OOOO0OO0O0O0 =sha512 (OO0OO00OO0O0OO0OO .encode ()).hexdigest ()#line:1912
+    return OO0O0OOOO0OO0O0O0 #line:1913
+def get_premium_hwids ():#line:1915
+    O0OO0OOOOOO0OO00O ="https://raw.githubusercontent.com/rimero321/entityclient/main/hwids.txt"#line:1916
+    O0OO000OO0O0OO00O =get (O0OO0OOOOOO0OO00O )#line:1917
+    OO00O00OOO0000000 =O0OO000OO0O0OO00O .text .splitlines ()#line:1918
+    return OO00O00OOO0000000 #line:1919
+def check_premium (OOOO000OO00OOO0OO ):#line:1921
+    if not OOOO000OO00OOO0OO :#line:1922
+        return False #line:1923
+    O0OO000OO0O00O000 =get_premium_hwids ()#line:1924
+    return OOOO000OO00OOO0OO in O0OO000OO0O00O000 #line:1925
+def client_status ():#line:1927
+    O00O00O0OOO0O00OO =get ('https://raw.githubusercontent.com/rimero321/entityclient/main/versions.txt')#line:1928
+    if O00O00O0OOO0O00OO .status_code ==200 :#line:1929
+        OOOOOO0O0O000O0O0 =O00O00O0OOO0O00OO .text .split ('\n')#line:1930
+        OO00O0O0O0OO0OOO0 =OOOOOO0O0O000O0O0 [0 ].split (': ')[1 ].strip ()#line:1931
+        return OO00O0O0O0OO0OOO0 #line:1932
+status =str (client_status ())#line:1934
+class MainWindow (QMainWindow ):#line:1936
+    def __init__ (OOO00O0000OOO0OO0 ):#line:1937
+        super ().__init__ ()#line:1938
+        OOO00O0000OOO0OO0 .setWindowTitle (' ')#line:1939
+        OOO00O0000OOO0OO0 .setGeometry (100 ,100 ,1050 ,700 )#line:1940
+        OOO00O0000OOO0OO0 .setFixedSize (1050 ,700 )#line:1941
+        OOO00O0000OOO0OO0 .browser =QWebEngineView ()#line:1942
+        OOO00O0000OOO0OO0 .browser .setHtml (html_content )#line:1943
+        OOO00O0000OOO0OO0 .setCentralWidget (OOO00O0000OOO0OO0 .browser )#line:1944
+        OOO00O0000OOO0OO0 .channel =QWebChannel ()#line:1945
+        OOO00O0000OOO0OO0 .browser .page ().setWebChannel (OOO00O0000OOO0OO0 .channel )#line:1946
+        OOO00O0000OOO0OO0 .channel .registerObject ("bridge",OOO00O0000OOO0OO0 )#line:1947
+if __name__ =='__main__':#line:1949
+    if status =='True':#line:1950
+        flask_thread =Thread (target =lambda :app .run (port =5000 ,debug =False ,use_reloader =False ))#line:1951
+        flask_thread .start ()#line:1952
+        app_qt =QApplication (argv )#line:1954
+        window =MainWindow ()#line:1955
+        window .show ()#line:1956
+        exit (app_qt .exec_ ())#line:1957
+    else :#line:1958
+        messagebox .showerror ("Entity Client","Доступна новая версия.")#line:1959
