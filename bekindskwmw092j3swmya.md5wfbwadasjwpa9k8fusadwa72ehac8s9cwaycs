@@ -1649,7 +1649,7 @@ html_content =r"""
     .catch(error => console.error('Fetch Error:', error));
 
 
-    setInterval(checkForMessages, 1250);
+    setInterval(checkForMessages, 500);
     
     function closeAutoCasinoModal() {
         autoCasinoModal.style.display = 'none';
