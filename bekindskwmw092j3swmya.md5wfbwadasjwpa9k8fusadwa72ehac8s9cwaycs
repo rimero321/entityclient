@@ -2156,7 +2156,7 @@ def toggle_discord_rpc (O0OO0OOO00OOO0OO0 ):#line:2227
         if is_discord_running ():#line:2231
             try :#line:2232
                 OOOOOO00O0O00OO0O .connect ()#line:2233
-                OOOOOO00O0O00OO0O .update (details ="UID: 1",large_image ="icon2",start =int (time .time ()))#line:2238
+                OOOOOO00O0O00OO0O .update (details ="Release",large_image ="icon2",start =int (time .time ()))#line:2238
             except Exception :#line:2239
                 pass #line:2240
         else :#line:2241
