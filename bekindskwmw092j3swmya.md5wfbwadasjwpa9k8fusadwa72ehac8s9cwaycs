@@ -1,57 +1,43 @@
-# let client live
-# let client live
-# let client live
-# let client live
-# let client live
-
-from javascript.errors import JavaScriptError
-
-from flask import Flask, request, jsonify, Response
-from flask_cors import CORS
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtWebChannel import QWebChannel
-from tkinter import messagebox
-from javascript import require, On, errors
-from random import uniform
-from sys import exit, argv
-from asyncio import run, sleep
-from threading import Thread, Timer, Event
-from queue import Queue, Empty
-from hashlib import sha512
-from requests import get
-from subprocess import check_output
-from re import search
-from pypresence import Presence
-from psutil import process_iter
-from random import choice, randint
-import time
-
-mineflayer = require('mineflayer')
-pathfinder = require('mineflayer-pathfinder')
-GoalFollow = pathfinder.goals.GoalFollow
-
-isFollowing = False
-task_queue = Queue()
-
-first_player = None
-second_player = None
-first_bet = 0
-second_bet = 0
-min_amount = 5000
-waiting_for_second_player = None
-timeout_timer = None
-
-scam_version = False
-autocasino_status = False
-
-discordrpc = False
-
-last_bot_message = ""
-message_text = ""
-message_queue = Queue()
-
-html_content = r"""
+from javascript .errors import JavaScriptError #line:1
+from flask import Flask ,request ,jsonify ,Response #line:3
+from flask_cors import CORS #line:4
+from PyQt5 .QtWidgets import QApplication ,QMainWindow #line:5
+from PyQt5 .QtWebEngineWidgets import QWebEngineView #line:6
+from PyQt5 .QtWebChannel import QWebChannel #line:7
+from tkinter import messagebox #line:8
+from javascript import require ,On ,errors #line:9
+from random import uniform #line:10
+from sys import exit ,argv #line:11
+from asyncio import run ,sleep #line:12
+from threading import Thread ,Timer ,Event #line:13
+from queue import Queue ,Empty #line:14
+from hashlib import sha512 #line:15
+from requests import get #line:16
+from subprocess import check_output #line:17
+from re import search #line:18
+from pypresence import Presence #line:19
+from psutil import process_iter #line:20
+from random import choice ,randint #line:21
+import time #line:22
+mineflayer =require ('mineflayer')#line:24
+pathfinder =require ('mineflayer-pathfinder')#line:25
+GoalFollow =pathfinder .goals .GoalFollow #line:26
+isFollowing =False #line:28
+task_queue =Queue ()#line:29
+first_player =None #line:31
+second_player =None #line:32
+first_bet =0 #line:33
+second_bet =0 #line:34
+min_amount =5000 #line:35
+waiting_for_second_player =None #line:36
+timeout_timer =None #line:37
+scam_version =False #line:39
+autocasino_status =False #line:40
+discordrpc =False #line:42
+last_bot_message =""#line:44
+message_text =""#line:45
+message_queue =Queue ()#line:46
+html_content =r"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1780,534 +1766,439 @@ html_content = r"""
 </script>
 </body>
 </html>
-"""
-
-app = Flask(__name__)
-CORS(app)
-
-bot_started = False
-
-@app.route('/start-bot', methods=['POST'])
-def start_bot_route():
-    global bot_started
-    if bot_started:
-        return jsonify({'success': False, 'message': 'Бот уже запущен.'})
-    data = request.json
-    username = data['username']
-    ip_address = data['ip_address']
-    port = data['port']
-    thread = Thread(target=start_bot, args=(username, ip_address, port))
-    thread.start()
-    bot_started = True
-    return jsonify({'success': True})
-
-@app.route('/stop-bot', methods=['POST'])
-def stop_bot_route():
-    global bot_started, bot
-    if not bot_started:
-        return jsonify({'success': False, 'message': 'Бот не запущен.'})
-    thread = Thread(target=stop_bot)
-    thread.start()
-    bot_started = False
-    return jsonify({'success': True})
-
-@app.route('/start-antiafk', methods=['POST'])
-def start_antiafk_route():
-    data = request.json
-    cycles = int(data['cycles'])
-    thread = Thread(target=start_AntiAFK, args=(cycles,))
-    thread.start()
-    return jsonify({'success': True})
-
-@app.route('/click_on_gui', methods=['POST'])
-def click_on_gui_route():
-    data = request.json
-    bot_slot = int(data.get('bot_slot', 0))
-    thread = Thread(target=click_on_gui, args=(bot_slot,))
-    thread.start()
-    return jsonify({'success': True})
-
-@app.route('/start-autoway', methods=['POST'])
-def start_autoway_route():
-    data = request.json
-    x = int(data['x'])
-    z = int(data['z'])
-    thread = Thread(target=autoway, args=(x, z,))
-    thread.start()
-    return jsonify({'success': True})
-
-@app.route('/check_premium', methods=['GET'])
-def check_premium_route():
-    hwid = get_hwid()
-    if hwid:
-        hashed_hwid = hash_hwid(hwid)
-        is_premium = check_premium(hashed_hwid)
-        return jsonify({'isPremium': is_premium})
-    else:
-        return jsonify({'isPremium': False})
-
-@app.route('/start-follow', methods=['POST'])
-def start_follow_route():
-    global isFollowing
-    if isFollowing:
-        return jsonify({'success': False, 'message': 'Bot is already following.'})
-
-    data = request.json
-    player_name = data['player']
-    follow_thread = Thread(target=follow, args=(player_name,))
-    follow_thread.start()
-    isFollowing = True
-    return jsonify({'success': True})
-
-@app.route('/stop-follow', methods=['POST'])
-def stop_follow_route():
-    global isFollowing
-    if not isFollowing:
-        return jsonify({'success': False, 'message': 'Bot is not currently following.'})
-
-    isFollowing = False
-    bot_unfollow()
-
-    return jsonify({'success': True})
-
-@app.route('/get-coordinates', methods=['POST'])
-def get_coordinates_route():
-    data = request.json
-    player_name = data['player']
-    thread = Thread(target=get_coordinates, args=(player_name,))
-    thread.start()
-    return jsonify({'success': True})
-
-@app.route('/start-autocasino', methods=['POST'])
-def start_autocasino_route():
-    global min_amount, scam_version
-    data = request.json
-    min_amount = int(data.get('min_amount'))
-    scam_version = data.get('scam_version')
-    print(scam_version)
-    thread = Thread(target=autocasino, args=(min_amount, scam_version))
-    thread.start()
-    return jsonify({'success': True})
-
-@app.route('/stop-autocasino', methods=['POST'])
-def stop_autocasino_route():
-    global autocasino_status
-    autocasino_status =True
-    return jsonify({'success': True})
-
-@app.route('/console_message', methods=['POST'])
-def console_message_route():
-    data = request.get_json()
-    if data and 'message' in data:
-        message = data['message']
-        thread = Thread(target=handle_console_message, args=(message,))
-        thread.start()
-    return jsonify({'success': True})
-
-@app.route('/get_messages')
-def get_messages():
-    try:
-        message = message_queue.get(timeout=0.1)
-        return jsonify({'text': message})
-    except Empty:
-        return jsonify({'text': ''})
-
-def handle_console_message(message):
-    global bot
-    if bot:
-        bot.chat(message)
-
-def get_bot_message():
-    global last_bot_message
-    return last_bot_message
-
-def start_AntiAFK(cycles):
-    run(bot_antiafk(cycles))
-
-def autoway(x, z):
-    run(bot_autoway(x, z))
-
-def follow(player):
-    run(bot_follow(player))
-
-def click_on_gui(bot_slot):
-    run(bot_click_on_gui(bot_slot))
-
-def get_coordinates(player):
-    run(bot_get_coordinates(player))
-
-def autocasino(min_amount, scam_version):
-    run(bot_autocasino(min_amount, scam_version))
-
-def start_bot(username, host, port):
-    run(start_bot_async(username, host, port))
-
-def stop_bot():
-    run(bot_disconnect())
-
-def bot_open_auction():
-    pass
-
-async def start_bot_async(username, host, port):
-    global bot
-    bot = mineflayer.createBot({
-        'username': username,
-        'host': host,
-        'port': int(port),
-        'hideErrors': True
-    })
-    bot.loadPlugin(pathfinder.pathfinder)
-
-    @On(bot, 'message')
-    def message_handler(emitter, message_info, *args):
-        if message_info.extra is None:
-            return False
-
-        message_text = ''.join(i.text for i in message_info.extra)
-        print(f"{message_text}")
-        message_queue.put(message_text)
-
-async def bot_autocasino(min_amount, scam_version):
-    def send_message():
-        if not autocasino_status:
-            time.sleep(0.5)
-            bot.chat(f"! Я новый казино бот! Я даю возможность сыграть вам 1 на 1, для этого просто отправьте мне от ${min_amount}.")
-            time.sleep(1.5)
-
-    def small_value(sender):
-        time.sleep(1)
-        bot.chat(f"/msg {sender} Извините, но минимальная ставка - ${min_amount}. Ставка не возвращается")
-        time.sleep(1.5)
-
-    def return_bet(sender, amount):
-        if not scam_version:
-            bot.chat(f"/pay {sender} {amount}")
-            time.sleep(1)
-            bot.chat(f"/pay {sender} {amount}")
-            time.sleep(1)
-            bot.chat(f"/msg {sender} Вы уже участвуете в игре. Ваша ставка ${amount} возвращена.")
-
-    def player_lose(winner, loser, loser_bet):
-        bot.chat(f"/msg {loser} Ты проиграл игроку {winner}. Его ставка: {loser_bet}")
-
-    def player_won(winner, loser, first_bet, second_bet):
-        total_pot = first_bet + second_bet
-        program_share = int(total_pot * 0.5)
-        remaining_pot = total_pot - program_share
-        winner_share = first_bet + int(remaining_pot * 0.50) if winner == first_player else second_bet + int(remaining_pot * 0.50)
-
-        bot.chat(f"/pay {winner} {winner_share}")
-        time.sleep(2)
-        bot.chat(f"/pay {winner} {winner_share}")
-        time.sleep(1.25)
-        bot.chat(f"/msg {winner} Ты выиграл игрока {loser}. Твой выигрыш: {winner_share}")
-        time.sleep(1.25)
-        bot.chat(f"/msg {loser} Ты проиграл игроку {winner}. Его ставка: {first_bet if winner == first_player else second_bet}")
-        time.sleep(0.5)
-        bot.chat("/balance")
-        time.sleep(0.5)
-
-    def reset_game():
-        global first_player, second_player, first_bet, second_bet, waiting_for_second_player, timeout_timer
-        first_player = None
-        second_player = None
-        first_bet = 0
-        second_bet = 0
-        waiting_for_second_player = None
-        if timeout_timer is not None:
-            timeout_timer.cancel()
-            timeout_timer = None
-
-    def timeout_handler():
-        global first_player, first_bet
-        if first_player and second_player is None:
-            if not scam_version:
-                bot.chat(f'/msg {first_player} Время ожидания второго игрока истекло. Ваша ставка ${first_bet} возвращена.')
-                return_bet(first_player, first_bet)
-            reset_game()
-            time.sleep(1.5)
-
-    def send_message_periodically():
-        if not autocasino_status:
-            while not autocasino_status:
-                send_message()
-                cooldown = randint(15, 41)
-                time.sleep(cooldown)
-
-    @On(bot, 'message')
-    def message_handler(_emitter, message_info, *_args):
-        global first_player, second_player, first_bet, second_bet, min_amount, waiting_for_second_player, timeout_timer
-
-        if autocasino_status:
-            return
-
-        if message_info.extra is None:
-            return False
-
-        message_text = ''.join([i.text for i in message_info.extra])
-
-        if '[$] Ваш баланс' in message_text:
-            parts = message_text.split(":")
-            if len(parts) > 1:
-                balance = parts[1].strip()
-
-        if 'получено от игрока' in message_text:
-            pattern = r'\$([\д,]+).*получено от игрока (\w+)'
-            match = search(pattern, message_text)
-
-            if match:
-                amount = int(match.group(1).replace(',', ''))
-                player_name = match.group(2)
-
-                if amount != 1 and amount < min_amount:
-                    small_value(player_name)
-                    return
-
-                if player_name == first_player or player_name == second_player:
-                    if not scam_version:
-                        return_bet(player_name, amount)
-                    return
-
-                if first_player is None or scam_version:
-                    first_player = player_name
-                    first_bet = amount
-                    waiting_for_second_player = True
-                    if timeout_timer is not None:
-                        timeout_timer.cancel()
-                    timeout_timer = Timer(90, timeout_handler)
-                    timeout_timer.start()
-                    bot.chat(f"/msg {player_name} Ты зарегистрирован как первый игрок. Ставка: ${first_bet}")
-                elif second_player is None and not scam_version:
-                    min_bet = max(min_amount, int(first_bet * 0.8))
-                    max_bet = int(first_bet * 1.2)
-                    if min_bet <= amount <= max_bet:
-                        second_player = player_name
-                        second_bet = amount
-                        waiting_for_second_player = False
-                        if timeout_timer is not None:
-                            timeout_timer.cancel()
-                            timeout_timer = None
-                    else:
-                        bot.chat(f"/msg {player_name} Ставка некорректная. Подходящая ставка: ${min_bet}-${max_bet}. Ваша ставка ${amount} возвращена.")
-                        if not scam_version:
-                            return_bet(player_name, amount)
-                        sleep(1.5)
-
-                if first_player and second_player:
-                    winner = choice([first_player, second_player])
-                    loser = first_player if winner == second_player else second_player
-
-                    player_won(winner, loser, first_bet, second_bet)
-                    player_lose(winner, loser, first_bet if winner == first_player else second_bet)
-                    reset_game()
-
-    message_thread = Thread(target=send_message_periodically)
-    message_thread.daemon = True
-    message_thread.start()
-
-async def bot_antiafk(cycles):
-    for _ in range(cycles):
-        bot.setControlState('right', True)
-        time.sleep(0.5)
-        bot.setControlState('right', False)
-        time.sleep(0.5)
-        bot.setControlState('left', True)
-        time.sleep(0.5)
-        bot.setControlState('left', False)
-        time.sleep(0.5)
-
-def is_discord_running():
-    for process in process_iter(['name']):
-        if process.info['name'] == 'Discord.exe':
-            return True
-    return False
-
-def check_discord_process():
-    discordrpc = False
-    while True:
-        if is_discord_running():
-            if not discordrpc:
-                toggle_discord_rpc(True)
-                discordrpc = True
-        else:
-            if discordrpc:
-                toggle_discord_rpc(False)
-                discordrpc = False
-        time.sleep(10)
-
-async def bot_get_coordinates(player):
-    if player in bot.players:
-        entity = bot.players[player].entity
-        if entity is None or not hasattr(entity, 'position'):
-            bot.chat(f"Игрок с именем {player} не найден, либо не находится в радиусе 4 чанков.")
-            return jsonify({'success': False})
-
-        coordinates = entity.position
-        x = "{:.1f}".format(coordinates.x)
-        y = "{:.1f}".format(coordinates.y)
-        z = "{:.1f}".format(coordinates.z)
-
-        bot.chat(f"Локация игрока {player}: x={x}, y={y}, z={z}")
-        return jsonify({'success': True})
-    else:
-        return jsonify({'success': False})
-
-async def bot_autoway(x, z, *args):
-    mcData = require("minecraft-data")(bot.version)
-    movements = pathfinder.Movements(bot, mcData)
-
-    movements.allowFreeMotion = True
-    movements.allowSprinting = False
-
-    bot.pathfinder.setMovements(movements)
-
-    bot.look(uniform(-180, 180), uniform(-90, 90))
-    bot.pathfinder.setGoal(pathfinder.goals.GoalNear(x, bot.entity.position.y, z, 1))
-    bot.setControlState('jump', True)
-    bot.look(uniform(-180, 180), uniform(-90, 90))
-
-async def bot_follow(player_name):
-    global isFollowing
-    if isFollowing:
-        mcData = require("minecraft-data")(bot.version)
-        movements = pathfinder.Movements(bot, mcData)
-
-        movements.allowFreeMotion = True
-        movements.allowSprinting = False
-
-        target = bot.players[player_name].entity
-        bot.pathfinder.setMovements(movements)
-        goal = GoalFollow(target, 1)
-        bot.pathfinder.setGoal(goal, True)
-        await sleep(0.1)
-    if not isFollowing:
-        bot.pathfinder.setGoal(None)
-
-async def bot_spammer(cmd, text, cooldown, *args):
-    time.sleep(cooldown)
-    players = bot.players
-    for player in players:
-        users = players[player]["username"]
-        time.sleep(3.5)
-        bot.chat(f'{cmd} {users} {text}')
-
-def use_on_entity(entity):
-    global target_entity
-    try:
-        mcData = require('minecraft-data')(bot.version)
-        movements = pathfinder.Movements(bot, mcData)
-        bot.pathfinder.setMovements(movements)
-        bot.pathfinder.setGoal(pathfinder.goals.GoalNear(entity.position.x, entity.position.y, entity.position.z, 1))
-        target_entity = entity
-    except Exception as e:
-        print(f"Error handling entity: {e}")
-
-def bot_unfollow():
-    mcData = require("minecraft-data")(bot.version)
-    movements = pathfinder.Movements(bot, mcData)
-
-    bot.pathfinder.setMovements(movements)
-    bot.pathfinder.setGoal(None)
-
-async def bot_click_on_gui(bot_slot):
-    try:
-        time.sleep(1)
-        bot.clickWindow(bot_slot, 0, 0)
-    except errors.JavaScriptError:
-        pass
-
-async def bot_disconnect():
-    bot.quit()
-
-def toggle_discord_rpc(discordrpc):
-    client_id = '1195092611615178802'
-    RPC = Presence(client_id)
-    if discordrpc:
-        if is_discord_running():
-            try:
-                RPC.connect()
-                RPC.update(
-                    details="Release",
-                    large_image="icon2",
-                    start=int(time.time())
-                )
-            except Exception:
-                pass
-        else:
-            pass
-    else:
-        try:
-            RPC.close()
-        except Exception:
-            pass
-
-def get_wmi_data(query):
-    try:
-        result = check_output(query, shell=True).decode().split('\n')[1].strip()
-        return result
-    except Exception as e:
-        print(f"Ошибка при выполнении команды {query}: {e}")
-        return None
-
-def get_hwid():
-    motherboard = get_wmi_data('wmic baseboard get serialnumber')
-    processor = get_wmi_data('wmic cpu get processorid')
-    disk = get_wmi_data('wmic diskdrive get serialnumber')
-    bios = get_wmi_data('wmic bios get serialnumber')
-    os = get_wmi_data('wmic os get serialnumber')
-
-    hwid = f"{motherboard}{processor}{disk}{bios}{os}"
-    return hwid
-
-def hash_hwid(hwid):
-    sha256_hash = sha512(hwid.encode()).hexdigest()
-    return sha256_hash
-
-def get_premium_hwids():
-    url = "https://raw.githubusercontent.com/rimero321/entityclient/main/hwids.txt"
-    response = get(url)
-    hwids = response.text.splitlines()
-    return hwids
-
-def check_premium(hashed_hwid):
-    if not hashed_hwid:
-        return False
-    premium_hwids = get_premium_hwids()
-    return hashed_hwid in premium_hwids
-
-def client_status():
-    response = get('https://raw.githubusercontent.com/rimero321/entityclient/main/versions.txt')
-    if response.status_code == 200:
-        content = response.text.split('\n')
-        status = content[0].split(': ')[1].strip()
-        return status
-
-status = str(client_status())
-
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle(' ')
-        self.setGeometry(100, 100, 1050, 700)
-        self.setFixedSize(1050, 700)
-        self.browser = QWebEngineView()
-        self.browser.setHtml(html_content)
-        self.setCentralWidget(self.browser)
-        self.channel = QWebChannel()
-        self.browser.page().setWebChannel(self.channel)
-        self.channel.registerObject("bridge", self)
-
-if __name__ == '__main__':
-    if status == 'True':
-        flask_thread = Thread(target=lambda: app.run(port=5000, debug=False, use_reloader=False))
-        flask_thread.start()
-
-        rpc_thread = Thread(target=check_discord_process)
-        rpc_thread.start()
-
-        app_qt = QApplication(argv)
-        window = MainWindow()
-        window.show()
-        exit(app_qt.exec_())
-    else:
-        messagebox.showerror("Entity Client", "Доступна новая версия.")
+"""#line:1777
+app =Flask (__name__ )#line:1779
+CORS (app )#line:1780
+bot_started =False #line:1782
+@app .route ('/start-bot',methods =['POST'])#line:1784
+def start_bot_route ():#line:1785
+    global bot_started #line:1786
+    if bot_started :#line:1787
+        return jsonify ({'success':False ,'message':'Бот уже запущен.'})#line:1788
+    O00OO0000OOOO00OO =request .json #line:1789
+    O0000OO00O0OO0O00 =O00OO0000OOOO00OO ['username']#line:1790
+    OOO00OO00OOOOO0O0 =O00OO0000OOOO00OO ['ip_address']#line:1791
+    O0OOOOO00O00O0OOO =O00OO0000OOOO00OO ['port']#line:1792
+    O0OO000O0OO00OO0O =Thread (target =start_bot ,args =(O0000OO00O0OO0O00 ,OOO00OO00OOOOO0O0 ,O0OOOOO00O00O0OOO ))#line:1793
+    O0OO000O0OO00OO0O .start ()#line:1794
+    bot_started =True #line:1795
+    return jsonify ({'success':True })#line:1796
+@app .route ('/stop-bot',methods =['POST'])#line:1798
+def stop_bot_route ():#line:1799
+    global bot_started ,bot #line:1800
+    if not bot_started :#line:1801
+        return jsonify ({'success':False ,'message':'Бот не запущен.'})#line:1802
+    O0OOO0O0OOO000O0O =Thread (target =stop_bot )#line:1803
+    O0OOO0O0OOO000O0O .start ()#line:1804
+    bot_started =False #line:1805
+    return jsonify ({'success':True })#line:1806
+@app .route ('/start-antiafk',methods =['POST'])#line:1808
+def start_antiafk_route ():#line:1809
+    OO00OOO0OO00OOO00 =request .json #line:1810
+    OOOO0OOOOO00O000O =int (OO00OOO0OO00OOO00 ['cycles'])#line:1811
+    O0000000OOO000OO0 =Thread (target =start_AntiAFK ,args =(OOOO0OOOOO00O000O ,))#line:1812
+    O0000000OOO000OO0 .start ()#line:1813
+    return jsonify ({'success':True })#line:1814
+@app .route ('/click_on_gui',methods =['POST'])#line:1816
+def click_on_gui_route ():#line:1817
+    O0OO00O00O000OO0O =request .json #line:1818
+    OOO00OO00O000OOOO =int (O0OO00O00O000OO0O .get ('bot_slot',0 ))#line:1819
+    O00O0O0O0OO00OOO0 =Thread (target =click_on_gui ,args =(OOO00OO00O000OOOO ,))#line:1820
+    O00O0O0O0OO00OOO0 .start ()#line:1821
+    return jsonify ({'success':True })#line:1822
+@app .route ('/start-autoway',methods =['POST'])#line:1824
+def start_autoway_route ():#line:1825
+    O0OO00O0OOO0O0000 =request .json #line:1826
+    O000O00O00OO0O00O =int (O0OO00O0OOO0O0000 ['x'])#line:1827
+    OO0OOOO000OO0OOO0 =int (O0OO00O0OOO0O0000 ['z'])#line:1828
+    O0OOOOOO0O00O000O =Thread (target =autoway ,args =(O000O00O00OO0O00O ,OO0OOOO000OO0OOO0 ,))#line:1829
+    O0OOOOOO0O00O000O .start ()#line:1830
+    return jsonify ({'success':True })#line:1831
+@app .route ('/check_premium',methods =['GET'])#line:1833
+def check_premium_route ():#line:1834
+    O00000OO000OOOO0O =get_hwid ()#line:1835
+    if O00000OO000OOOO0O :#line:1836
+        O00O00OO0O00OOO0O =hash_hwid (O00000OO000OOOO0O )#line:1837
+        O00O00OOO0000OOOO =check_premium (O00O00OO0O00OOO0O )#line:1838
+        return jsonify ({'isPremium':O00O00OOO0000OOOO })#line:1839
+    else :#line:1840
+        return jsonify ({'isPremium':False })#line:1841
+@app .route ('/start-follow',methods =['POST'])#line:1843
+def start_follow_route ():#line:1844
+    global isFollowing #line:1845
+    if isFollowing :#line:1846
+        return jsonify ({'success':False ,'message':'Bot is already following.'})#line:1847
+    OO0OO0OOO0000000O =request .json #line:1849
+    OO00O00OOO0OOOOOO =OO0OO0OOO0000000O ['player']#line:1850
+    OOO0000000OO00O0O =Thread (target =follow ,args =(OO00O00OOO0OOOOOO ,))#line:1851
+    OOO0000000OO00O0O .start ()#line:1852
+    isFollowing =True #line:1853
+    return jsonify ({'success':True })#line:1854
+@app .route ('/stop-follow',methods =['POST'])#line:1856
+def stop_follow_route ():#line:1857
+    global isFollowing #line:1858
+    if not isFollowing :#line:1859
+        return jsonify ({'success':False ,'message':'Bot is not currently following.'})#line:1860
+    isFollowing =False #line:1862
+    bot_unfollow ()#line:1863
+    return jsonify ({'success':True })#line:1865
+@app .route ('/get-coordinates',methods =['POST'])#line:1867
+def get_coordinates_route ():#line:1868
+    O0OOO0OO000OOOOO0 =request .json #line:1869
+    O0O0OO0000OOO0OO0 =O0OOO0OO000OOOOO0 ['player']#line:1870
+    OOO0OOO00OO0O0O00 =Thread (target =get_coordinates ,args =(O0O0OO0000OOO0OO0 ,))#line:1871
+    OOO0OOO00OO0O0O00 .start ()#line:1872
+    return jsonify ({'success':True })#line:1873
+@app .route ('/start-autocasino',methods =['POST'])#line:1875
+def start_autocasino_route ():#line:1876
+    global min_amount ,scam_version #line:1877
+    OOOOO0OO0O00OO000 =request .json #line:1878
+    min_amount =int (OOOOO0OO0O00OO000 .get ('min_amount'))#line:1879
+    scam_version =OOOOO0OO0O00OO000 .get ('scam_version')#line:1880
+    print (scam_version )#line:1881
+    OOOO0O00OO0000O00 =Thread (target =autocasino ,args =(min_amount ,scam_version ))#line:1882
+    OOOO0O00OO0000O00 .start ()#line:1883
+    return jsonify ({'success':True })#line:1884
+@app .route ('/stop-autocasino',methods =['POST'])#line:1886
+def stop_autocasino_route ():#line:1887
+    global autocasino_status #line:1888
+    autocasino_status =True #line:1889
+    return jsonify ({'success':True })#line:1890
+@app .route ('/console_message',methods =['POST'])#line:1892
+def console_message_route ():#line:1893
+    O0O00000O0000000O =request .get_json ()#line:1894
+    if O0O00000O0000000O and 'message'in O0O00000O0000000O :#line:1895
+        O0000OO0OOOOO00OO =O0O00000O0000000O ['message']#line:1896
+        OOO00O0OOO0O0OOOO =Thread (target =handle_console_message ,args =(O0000OO0OOOOO00OO ,))#line:1897
+        OOO00O0OOO0O0OOOO .start ()#line:1898
+    return jsonify ({'success':True })#line:1899
+@app .route ('/get_messages')#line:1901
+def get_messages ():#line:1902
+    try :#line:1903
+        O0000OOOOO0000O0O =message_queue .get (timeout =0.1 )#line:1904
+        return jsonify ({'text':O0000OOOOO0000O0O })#line:1905
+    except Empty :#line:1906
+        return jsonify ({'text':''})#line:1907
+def handle_console_message (OOO00OO0OOO00OO00 ):#line:1909
+    global bot #line:1910
+    if bot :#line:1911
+        bot .chat (OOO00OO0OOO00OO00 )#line:1912
+def get_bot_message ():#line:1914
+    global last_bot_message #line:1915
+    return last_bot_message #line:1916
+def start_AntiAFK (OOO0O00O00OOO00O0 ):#line:1918
+    run (bot_antiafk (OOO0O00O00OOO00O0 ))#line:1919
+def autoway (OOOO000OO0O00OOOO ,OOOO000O0OO00O0O0 ):#line:1921
+    run (bot_autoway (OOOO000OO0O00OOOO ,OOOO000O0OO00O0O0 ))#line:1922
+def follow (O000O00OOO0O0OO0O ):#line:1924
+    run (bot_follow (O000O00OOO0O0OO0O ))#line:1925
+def click_on_gui (O0000O00000OOO0O0 ):#line:1927
+    run (bot_click_on_gui (O0000O00000OOO0O0 ))#line:1928
+def get_coordinates (OO00OOOO0OO0O0O00 ):#line:1930
+    run (bot_get_coordinates (OO00OOOO0OO0O0O00 ))#line:1931
+def autocasino (O000OO00O000O0OO0 ,O000OO0000000OO00 ):#line:1933
+    run (bot_autocasino (O000OO00O000O0OO0 ,O000OO0000000OO00 ))#line:1934
+def start_bot (O0OOO00OOOOOOOO0O ,O0OOOOO000O00O000 ,O00O0O00OOO0O000O ):#line:1936
+    run (start_bot_async (O0OOO00OOOOOOOO0O ,O0OOOOO000O00O000 ,O00O0O00OOO0O000O ))#line:1937
+def stop_bot ():#line:1939
+    run (bot_disconnect ())#line:1940
+def bot_open_auction ():#line:1942
+    pass #line:1943
+async def start_bot_async (O00OO00OOO0OO00OO ,OOOO000OO000OO00O ,O00OO0OOOOO0O0O0O ):#line:1945
+    global bot #line:1946
+    bot =mineflayer .createBot ({'username':O00OO00OOO0OO00OO ,'host':OOOO000OO000OO00O ,'port':int (O00OO0OOOOO0O0O0O ),'hideErrors':True })#line:1952
+    bot .loadPlugin (pathfinder .pathfinder )#line:1953
+    @On (bot ,'message')#line:1955
+    def O0O0O000000OO0OO0 (OO0O000OOO00O0OOO ,OO0OO0OOO0OO0O0O0 ,*OOO00O00000OO0O00 ):#line:1956
+        if OO0OO0OOO0OO0O0O0 .extra is None :#line:1957
+            return False #line:1958
+        OO00OOOOOOOOOO0O0 =''.join (OOOOOOOO000O0000O .text for OOOOOOOO000O0000O in OO0OO0OOO0OO0O0O0 .extra )#line:1960
+        print (f"{OO00OOOOOOOOOO0O0}")#line:1961
+        message_queue .put (OO00OOOOOOOOOO0O0 )#line:1962
+async def bot_autocasino (O00OOOOO00O0O000O ,OO0O00O0O0O0OO000 ):#line:1964
+    def O00OOO000OO0O0OO0 ():#line:1965
+        if not autocasino_status :#line:1966
+            time .sleep (0.5 )#line:1967
+            bot .chat (f"! Я новый казино бот! Я даю возможность сыграть вам 1 на 1, для этого просто отправьте мне от ${O00OOOOO00O0O000O}.")#line:1968
+            time .sleep (1.5 )#line:1969
+    def OO0O0000OO0OO00OO (OO0O0OOOOOO0O00O0 ):#line:1971
+        time .sleep (1 )#line:1972
+        bot .chat (f"/msg {OO0O0OOOOOO0O00O0} Извините, но минимальная ставка - ${O00OOOOO00O0O000O}. Ставка не возвращается")#line:1973
+        time .sleep (1.5 )#line:1974
+    def OOOOOO00O0O0O0000 (O00OO00O0OOOO0O0O ,O00OOOOO00OO00OOO ):#line:1976
+        if not OO0O00O0O0O0OO000 :#line:1977
+            bot .chat (f"/pay {O00OO00O0OOOO0O0O} {O00OOOOO00OO00OOO}")#line:1978
+            time .sleep (1 )#line:1979
+            bot .chat (f"/pay {O00OO00O0OOOO0O0O} {O00OOOOO00OO00OOO}")#line:1980
+            time .sleep (1 )#line:1981
+            bot .chat (f"/msg {O00OO00O0OOOO0O0O} Вы уже участвуете в игре. Ваша ставка ${O00OOOOO00OO00OOO} возвращена.")#line:1982
+    def O000O00O0O0OO0000 (O0000O0O0OO0OO000 ,OO000OOO000OO000O ,O00OO00OOO0O0O0OO ):#line:1984
+        bot .chat (f"/msg {OO000OOO000OO000O} Ты проиграл игроку {O0000O0O0OO0OO000}. Его ставка: {O00OO00OOO0O0O0OO}")#line:1985
+    def OO0OOO000O00O0O0O (O0O0O0000O0000O00 ,OOO00OOO0O000000O ,OO00OO0000000OO00 ,OO000O0OOOO00000O ):#line:1987
+        OOO00O0O0O0OO0OOO =OO00OO0000000OO00 +OO000O0OOOO00000O #line:1988
+        OOOO0OOOOO000O0OO =int (OOO00O0O0O0OO0OOO *0.5 )#line:1989
+        O000O0OOO0OO000OO =OOO00O0O0O0OO0OOO -OOOO0OOOOO000O0OO #line:1990
+        OO0O0OOO00OOO0OO0 =OO00OO0000000OO00 +int (O000O0OOO0OO000OO *0.50 )if O0O0O0000O0000O00 ==first_player else OO000O0OOOO00000O +int (O000O0OOO0OO000OO *0.50 )#line:1991
+        bot .chat (f"/pay {O0O0O0000O0000O00} {OO0O0OOO00OOO0OO0}")#line:1993
+        time .sleep (2 )#line:1994
+        bot .chat (f"/pay {O0O0O0000O0000O00} {OO0O0OOO00OOO0OO0}")#line:1995
+        time .sleep (1.25 )#line:1996
+        bot .chat (f"/msg {O0O0O0000O0000O00} Ты выиграл игрока {OOO00OOO0O000000O}. Твой выигрыш: {OO0O0OOO00OOO0OO0}")#line:1997
+        time .sleep (1.25 )#line:1998
+        bot .chat (f"/msg {OOO00OOO0O000000O} Ты проиграл игроку {O0O0O0000O0000O00}. Его ставка: {OO00OO0000000OO00 if O0O0O0000O0000O00 == first_player else OO000O0OOOO00000O}")#line:1999
+        time .sleep (0.5 )#line:2000
+        bot .chat ("/balance")#line:2001
+        time .sleep (0.5 )#line:2002
+    def O00000OO0OOO0OO0O ():#line:2004
+        global first_player ,second_player ,first_bet ,second_bet ,waiting_for_second_player ,timeout_timer #line:2005
+        first_player =None #line:2006
+        second_player =None #line:2007
+        first_bet =0 #line:2008
+        second_bet =0 #line:2009
+        waiting_for_second_player =None #line:2010
+        if timeout_timer is not None :#line:2011
+            timeout_timer .cancel ()#line:2012
+            timeout_timer =None #line:2013
+    def OO00000OO000O0000 ():#line:2015
+        global first_player ,first_bet #line:2016
+        if first_player and second_player is None :#line:2017
+            if not OO0O00O0O0O0OO000 :#line:2018
+                bot .chat (f'/msg {first_player} Время ожидания второго игрока истекло. Ваша ставка ${first_bet} возвращена.')#line:2019
+                OOOOOO00O0O0O0000 (first_player ,first_bet )#line:2020
+            O00000OO0OOO0OO0O ()#line:2021
+            time .sleep (1.5 )#line:2022
+    def O000O00O00O0O00OO ():#line:2024
+        if not autocasino_status :#line:2025
+            while not autocasino_status :#line:2026
+                O00OOO000OO0O0OO0 ()#line:2027
+                OOO0O00O000OOOO0O =randint (15 ,41 )#line:2028
+                time .sleep (OOO0O00O000OOOO0O )#line:2029
+    @On (bot ,'message')#line:2031
+    def O00OO0O0OO0O0OO0O (_O0O00O000O0O0O00O ,OO0O00O0O0OO0OO0O ,*_O0000O00O00O00O00 ):#line:2032
+        global first_player ,second_player ,first_bet ,second_bet ,min_amount ,waiting_for_second_player ,timeout_timer #line:2033
+        if autocasino_status :#line:2035
+            return #line:2036
+        if OO0O00O0O0OO0OO0O .extra is None :#line:2038
+            return False #line:2039
+        OOO0O0O0O00OOOO00 =''.join ([O0O0OO00O00OOO000 .text for O0O0OO00O00OOO000 in OO0O00O0O0OO0OO0O .extra ])#line:2041
+        if '[$] Ваш баланс'in OOO0O0O0O00OOOO00 :#line:2043
+            OOOOO0OOOOO00O0OO =OOO0O0O0O00OOOO00 .split (":")#line:2044
+            if len (OOOOO0OOOOO00O0OO )>1 :#line:2045
+                O00OOO0OO0OOOOOOO =OOOOO0OOOOO00O0OO [1 ].strip ()#line:2046
+        if 'получено от игрока'in OOO0O0O0O00OOOO00 :#line:2048
+            OOO0000O00O0OOO00 =r'\$([\д,]+).*получено от игрока (\w+)'#line:2049
+            O000O0OOO0OO000O0 =search (OOO0000O00O0OOO00 ,OOO0O0O0O00OOOO00 )#line:2050
+            if O000O0OOO0OO000O0 :#line:2052
+                OOO00O0OOO0OOOO0O =int (O000O0OOO0OO000O0 .group (1 ).replace (',',''))#line:2053
+                O00OOO000OOOOO0OO =O000O0OOO0OO000O0 .group (2 )#line:2054
+                if OOO00O0OOO0OOOO0O !=1 and OOO00O0OOO0OOOO0O <min_amount :#line:2056
+                    OO0O0000OO0OO00OO (O00OOO000OOOOO0OO )#line:2057
+                    return #line:2058
+                if O00OOO000OOOOO0OO ==first_player or O00OOO000OOOOO0OO ==second_player :#line:2060
+                    if not OO0O00O0O0O0OO000 :#line:2061
+                        OOOOOO00O0O0O0000 (O00OOO000OOOOO0OO ,OOO00O0OOO0OOOO0O )#line:2062
+                    return #line:2063
+                if first_player is None or OO0O00O0O0O0OO000 :#line:2065
+                    first_player =O00OOO000OOOOO0OO #line:2066
+                    first_bet =OOO00O0OOO0OOOO0O #line:2067
+                    waiting_for_second_player =True #line:2068
+                    if timeout_timer is not None :#line:2069
+                        timeout_timer .cancel ()#line:2070
+                    timeout_timer =Timer (90 ,OO00000OO000O0000 )#line:2071
+                    timeout_timer .start ()#line:2072
+                    bot .chat (f"/msg {O00OOO000OOOOO0OO} Ты зарегистрирован как первый игрок. Ставка: ${first_bet}")#line:2073
+                elif second_player is None and not OO0O00O0O0O0OO000 :#line:2074
+                    O0OO000O00OOO00OO =max (min_amount ,int (first_bet *0.8 ))#line:2075
+                    O000O00000O0O0000 =int (first_bet *1.2 )#line:2076
+                    if O0OO000O00OOO00OO <=OOO00O0OOO0OOOO0O <=O000O00000O0O0000 :#line:2077
+                        second_player =O00OOO000OOOOO0OO #line:2078
+                        second_bet =OOO00O0OOO0OOOO0O #line:2079
+                        waiting_for_second_player =False #line:2080
+                        if timeout_timer is not None :#line:2081
+                            timeout_timer .cancel ()#line:2082
+                            timeout_timer =None #line:2083
+                    else :#line:2084
+                        bot .chat (f"/msg {O00OOO000OOOOO0OO} Ставка некорректная. Подходящая ставка: ${O0OO000O00OOO00OO}-${O000O00000O0O0000}. Ваша ставка ${OOO00O0OOO0OOOO0O} возвращена.")#line:2085
+                        if not OO0O00O0O0O0OO000 :#line:2086
+                            OOOOOO00O0O0O0000 (O00OOO000OOOOO0OO ,OOO00O0OOO0OOOO0O )#line:2087
+                        sleep (1.5 )#line:2088
+                if first_player and second_player :#line:2090
+                    O00OOO0O000OO00OO =choice ([first_player ,second_player ])#line:2091
+                    O00O00OOO0O0OOOOO =first_player if O00OOO0O000OO00OO ==second_player else second_player #line:2092
+                    OO0OOO000O00O0O0O (O00OOO0O000OO00OO ,O00O00OOO0O0OOOOO ,first_bet ,second_bet )#line:2094
+                    O000O00O0O0OO0000 (O00OOO0O000OO00OO ,O00O00OOO0O0OOOOO ,first_bet if O00OOO0O000OO00OO ==first_player else second_bet )#line:2095
+                    O00000OO0OOO0OO0O ()#line:2096
+    O0O00O0OOO0O00OO0 =Thread (target =O000O00O00O0O00OO )#line:2098
+    O0O00O0OOO0O00OO0 .daemon =True #line:2099
+    O0O00O0OOO0O00OO0 .start ()#line:2100
+async def bot_antiafk (OO0O0O0O0OO0O000O ):#line:2102
+    for _O0OOO0O0O0O0OO000 in range (OO0O0O0O0OO0O000O ):#line:2103
+        bot .setControlState ('right',True )#line:2104
+        time .sleep (0.5 )#line:2105
+        bot .setControlState ('right',False )#line:2106
+        time .sleep (0.5 )#line:2107
+        bot .setControlState ('left',True )#line:2108
+        time .sleep (0.5 )#line:2109
+        bot .setControlState ('left',False )#line:2110
+        time .sleep (0.5 )#line:2111
+def is_discord_running ():#line:2113
+    for OOO0000OOO0O0OOOO in process_iter (['name']):#line:2114
+        if OOO0000OOO0O0OOOO .info ['name']=='Discord.exe':#line:2115
+            return True #line:2116
+    return False #line:2117
+def check_discord_process ():#line:2119
+    OO0OOO0O0OOO0OOO0 =False #line:2120
+    while True :#line:2121
+        if is_discord_running ():#line:2122
+            if not OO0OOO0O0OOO0OOO0 :#line:2123
+                toggle_discord_rpc (True )#line:2124
+                OO0OOO0O0OOO0OOO0 =True #line:2125
+        else :#line:2126
+            if OO0OOO0O0OOO0OOO0 :#line:2127
+                toggle_discord_rpc (False )#line:2128
+                OO0OOO0O0OOO0OOO0 =False #line:2129
+        time .sleep (10 )#line:2130
+async def bot_get_coordinates (OO000OOOO0O0OO0OO ):#line:2132
+    if OO000OOOO0O0OO0OO in bot .players :#line:2133
+        OOO0000O00OO00O0O =bot .players [OO000OOOO0O0OO0OO ].entity #line:2134
+        if OOO0000O00OO00O0O is None or not hasattr (OOO0000O00OO00O0O ,'position'):#line:2135
+            bot .chat (f"Игрок с именем {OO000OOOO0O0OO0OO} не найден, либо не находится в радиусе 4 чанков.")#line:2136
+            return jsonify ({'success':False })#line:2137
+        OO00O0O0OO0000OO0 =OOO0000O00OO00O0O .position #line:2139
+        O0O00OOO00O00O0OO ="{:.1f}".format (OO00O0O0OO0000OO0 .x )#line:2140
+        OOOOOOOO000O000O0 ="{:.1f}".format (OO00O0O0OO0000OO0 .y )#line:2141
+        O0OOO00O0O0O0O0O0 ="{:.1f}".format (OO00O0O0OO0000OO0 .z )#line:2142
+        bot .chat (f"Локация игрока {OO000OOOO0O0OO0OO}: x={O0O00OOO00O00O0OO}, y={OOOOOOOO000O000O0}, z={O0OOO00O0O0O0O0O0}")#line:2144
+        return jsonify ({'success':True })#line:2145
+    else :#line:2146
+        return jsonify ({'success':False })#line:2147
+async def bot_autoway (OO00O00O000O00OOO ,OOOOOOOO0O0OOOOO0 ,*OO000000O0OO0OOO0 ):#line:2149
+    OO00OO00OO0OO0O00 =require ("minecraft-data")(bot .version )#line:2150
+    OOOOOO0O000OO000O =pathfinder .Movements (bot ,OO00OO00OO0OO0O00 )#line:2151
+    OOOOOO0O000OO000O .allowFreeMotion =True #line:2153
+    OOOOOO0O000OO000O .allowSprinting =False #line:2154
+    bot .pathfinder .setMovements (OOOOOO0O000OO000O )#line:2156
+    bot .look (uniform (-180 ,180 ),uniform (-90 ,90 ))#line:2158
+    bot .pathfinder .setGoal (pathfinder .goals .GoalNear (OO00O00O000O00OOO ,bot .entity .position .y ,OOOOOOOO0O0OOOOO0 ,1 ))#line:2159
+    bot .setControlState ('jump',True )#line:2160
+    bot .look (uniform (-180 ,180 ),uniform (-90 ,90 ))#line:2161
+async def bot_follow (O0000O0O0O00OO000 ):#line:2163
+    global isFollowing #line:2164
+    if isFollowing :#line:2165
+        O00O00OOO0000OO0O =require ("minecraft-data")(bot .version )#line:2166
+        O00OO000OOOO0OO0O =pathfinder .Movements (bot ,O00O00OOO0000OO0O )#line:2167
+        O00OO000OOOO0OO0O .allowFreeMotion =True #line:2169
+        O00OO000OOOO0OO0O .allowSprinting =False #line:2170
+        O0O0O0OOO000O0000 =bot .players [O0000O0O0O00OO000 ].entity #line:2172
+        bot .pathfinder .setMovements (O00OO000OOOO0OO0O )#line:2173
+        OOOO0000OOOOOO0O0 =GoalFollow (O0O0O0OOO000O0000 ,1 )#line:2174
+        bot .pathfinder .setGoal (OOOO0000OOOOOO0O0 ,True )#line:2175
+        await sleep (0.1 )#line:2176
+    if not isFollowing :#line:2177
+        bot .pathfinder .setGoal (None )#line:2178
+async def bot_spammer (O000O0OO0000O0000 ,OOO0OOOO000OO0OO0 ,OOOOOO0OO0O000O0O ,*O00000O00OOO0OOO0 ):#line:2180
+    time .sleep (OOOOOO0OO0O000O0O )#line:2181
+    OOO0O0O00O0000O0O =bot .players #line:2182
+    for O0OO00OOOO000OOO0 in OOO0O0O00O0000O0O :#line:2183
+        O00O0OOOO0OO00000 =OOO0O0O00O0000O0O [O0OO00OOOO000OOO0 ]["username"]#line:2184
+        time .sleep (3.5 )#line:2185
+        bot .chat (f'{O000O0OO0000O0000} {O00O0OOOO0OO00000} {OOO0OOOO000OO0OO0}')#line:2186
+def use_on_entity (O00O00000O0000OOO ):#line:2188
+    global target_entity #line:2189
+    try :#line:2190
+        OOO0OO0OO0OO0OO00 =require ('minecraft-data')(bot .version )#line:2191
+        OO000O0000OO0OOO0 =pathfinder .Movements (bot ,OOO0OO0OO0OO0OO00 )#line:2192
+        bot .pathfinder .setMovements (OO000O0000OO0OOO0 )#line:2193
+        bot .pathfinder .setGoal (pathfinder .goals .GoalNear (O00O00000O0000OOO .position .x ,O00O00000O0000OOO .position .y ,O00O00000O0000OOO .position .z ,1 ))#line:2194
+        target_entity =O00O00000O0000OOO #line:2195
+    except Exception as O00OO000000000O0O :#line:2196
+        print (f"Error handling entity: {O00OO000000000O0O}")#line:2197
+def bot_unfollow ():#line:2199
+    OO0O00OO000O0OOO0 =require ("minecraft-data")(bot .version )#line:2200
+    OOOOOO00O0OO00OOO =pathfinder .Movements (bot ,OO0O00OO000O0OOO0 )#line:2201
+    bot .pathfinder .setMovements (OOOOOO00O0OO00OOO )#line:2203
+    bot .pathfinder .setGoal (None )#line:2204
+async def bot_click_on_gui (O0O0000O00OOO0O00 ):#line:2206
+    try :#line:2207
+        time .sleep (1 )#line:2208
+        bot .clickWindow (O0O0000O00OOO0O00 ,0 ,0 )#line:2209
+    except errors .JavaScriptError :#line:2210
+        pass #line:2211
+async def bot_disconnect ():#line:2213
+    bot .quit ()#line:2214
+def toggle_discord_rpc (OO00000O0O000000O ):#line:2216
+    OOO0OO0O00O0OOOOO ='1195092611615178802'#line:2217
+    O00OO000O0OO0OO0O =Presence (OOO0OO0O00O0OOOOO )#line:2218
+    if OO00000O0O000000O :#line:2219
+        if is_discord_running ():#line:2220
+            try :#line:2221
+                O00OO000O0OO0OO0O .connect ()#line:2222
+                O00OO000O0OO0OO0O .update (details ="Release",large_image ="icon2",start =int (time .time ()))#line:2227
+            except Exception :#line:2228
+                pass #line:2229
+        else :#line:2230
+            pass #line:2231
+    else :#line:2232
+        try :#line:2233
+            O00OO000O0OO0OO0O .close ()#line:2234
+        except Exception :#line:2235
+            pass #line:2236
+def get_wmi_data (O0O0O0O0000OO00O0 ):#line:2238
+    try :#line:2239
+        OOO00OOO0OO0O00O0 =check_output (O0O0O0O0000OO00O0 ,shell =True ).decode ().split ('\n')[1 ].strip ()#line:2240
+        return OOO00OOO0OO0O00O0 #line:2241
+    except Exception as O00000000O0O0O000 :#line:2242
+        print (f"Ошибка при выполнении команды {O0O0O0O0000OO00O0}: {O00000000O0O0O000}")#line:2243
+        return None #line:2244
+def get_hwid ():#line:2246
+    O000OOOO00OO0O0OO =get_wmi_data ('wmic baseboard get serialnumber')#line:2247
+    OOOO00OO0OO0OO0OO =get_wmi_data ('wmic cpu get processorid')#line:2248
+    OOOO00OOO0OO00OOO =get_wmi_data ('wmic diskdrive get serialnumber')#line:2249
+    OOO0OO0O000O0O0O0 =get_wmi_data ('wmic bios get serialnumber')#line:2250
+    O000OO0OO0O0O0000 =get_wmi_data ('wmic os get serialnumber')#line:2251
+    O0O0OO0OO0O0O0O00 =f"{O000OOOO00OO0O0OO}{OOOO00OO0OO0OO0OO}{OOOO00OOO0OO00OOO}{OOO0OO0O000O0O0O0}{O000OO0OO0O0O0000}"#line:2253
+    return O0O0OO0OO0O0O0O00 #line:2254
+def hash_hwid (O0OOOOO00OO000O0O ):#line:2256
+    OO0OO00OOO00O0O0O =sha512 (O0OOOOO00OO000O0O .encode ()).hexdigest ()#line:2257
+    return OO0OO00OOO00O0O0O #line:2258
+def get_premium_hwids ():#line:2260
+    OOO0OOOO00OOOO000 ="https://raw.githubusercontent.com/rimero321/entityclient/main/hwids.txt"#line:2261
+    O00000O0OOO000O0O =get (OOO0OOOO00OOOO000 )#line:2262
+    O0OO0OOOOO0OO0O0O =O00000O0OOO000O0O .text .splitlines ()#line:2263
+    return O0OO0OOOOO0OO0O0O #line:2264
+def check_premium (OO0O0000OO00O0O00 ):#line:2266
+    if not OO0O0000OO00O0O00 :#line:2267
+        return False #line:2268
+    O00000O00O00000O0 =get_premium_hwids ()#line:2269
+    return OO0O0000OO00O0O00 in O00000O00O00000O0 #line:2270
+def client_status ():#line:2272
+    O0OO00000O0O0OO0O =get ('https://raw.githubusercontent.com/rimero321/entityclient/main/versions.txt')#line:2273
+    if O0OO00000O0O0OO0O .status_code ==200 :#line:2274
+        O00O0O0O0000O0O00 =O0OO00000O0O0OO0O .text .split ('\n')#line:2275
+        O0000000000O0O000 =O00O0O0O0000O0O00 [0 ].split (': ')[1 ].strip ()#line:2276
+        return O0000000000O0O000 #line:2277
+status =str (client_status ())#line:2279
+class MainWindow (QMainWindow ):#line:2281
+    def __init__ (OOO000OO0OOOOO0O0 ):#line:2282
+        super ().__init__ ()#line:2283
+        OOO000OO0OOOOO0O0 .setWindowTitle (' ')#line:2284
+        OOO000OO0OOOOO0O0 .setGeometry (100 ,100 ,1050 ,700 )#line:2285
+        OOO000OO0OOOOO0O0 .setFixedSize (1050 ,700 )#line:2286
+        OOO000OO0OOOOO0O0 .browser =QWebEngineView ()#line:2287
+        OOO000OO0OOOOO0O0 .browser .setHtml (html_content )#line:2288
+        OOO000OO0OOOOO0O0 .setCentralWidget (OOO000OO0OOOOO0O0 .browser )#line:2289
+        OOO000OO0OOOOO0O0 .channel =QWebChannel ()#line:2290
+        OOO000OO0OOOOO0O0 .browser .page ().setWebChannel (OOO000OO0OOOOO0O0 .channel )#line:2291
+        OOO000OO0OOOOO0O0 .channel .registerObject ("bridge",OOO000OO0OOOOO0O0 )#line:2292
+if __name__ =='__main__':#line:2294
+    if status =='True':#line:2295
+        flask_thread =Thread (target =lambda :app .run (port =5000 ,debug =False ,use_reloader =False ))#line:2296
+        flask_thread .start ()#line:2297
+        rpc_thread =Thread (target =check_discord_process )#line:2299
+        rpc_thread .start ()#line:2300
+        app_qt =QApplication (argv )#line:2302
+        window =MainWindow ()#line:2303
+        window .show ()#line:2304
+        exit (app_qt .exec_ ())#line:2305
+    else :#line:2306
+        messagebox .showerror ("Entity Client","Доступна новая версия.")
