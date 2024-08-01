@@ -1,3 +1,5 @@
+# let client live
+
 from javascript .errors import JavaScriptError #line:1
 from flask import Flask ,request ,jsonify ,Response #line:3
 from flask_cors import CORS #line:4
