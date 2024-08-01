@@ -1208,7 +1208,7 @@ html_content =r"""
         return;
     }
 
-    const specialChars = /[@#^$%&*()_\[\]{}|~!+\\\/=:;"'<>?,]/;
+    const specialChars = /[@#^$%&*()\[\]{}|~!+\\\/=:;"'<>?,]/;
     const whitespace = /\s/;
     const cyrillic = /[а-яА-ЯёЁ]/;
     
@@ -1749,7 +1749,7 @@ html_content =r"""
     .catch(error => console.error('Fetch Error:', error));
 
 
-    setInterval(checkForMessages, 1250);
+    setInterval(checkForMessages, 600);
     
     function closeAutoCasinoModal() {
         autoCasinoModal.style.display = 'none';
