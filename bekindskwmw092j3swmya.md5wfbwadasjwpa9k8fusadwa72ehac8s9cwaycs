@@ -1932,6 +1932,19 @@ async def start_bot_async (OO0OO0O0O00OO000O ,OOO000000O00000OO ,O0O0O0000OO0OO0
     def O0OOOO0O00OOOOOO0 (O0O0OO0OOOO000O0O ,O0O0O00O0O0OOO0O0 ,*OO0O0OO0000O0OOO0 ):#line:1975
         if O0O0O00O0O0OOO0O0 .extra is None :#line:1976
             return False #line:1977
+
+    @On(bot, 'spawn')
+    def bot_autoeat(event):
+        while True:
+            if bot.food in range(1, 16):
+                food_items = ['cooked_beef', 'cooked_porkchop']
+                for item in bot.inventory.items():
+                    print(1)
+                    if item.name in food_items:
+                        bot.equip(item, 'hand')
+                        bot.consume()
+                        break
+            sleep(5)
         O0O00OOO0O00OOO00 =''.join (OOOOOO0O000O0OO0O .text for OOOOOO0O000O0OO0O in O0O0O00O0O0OOO0O0 .extra if OOOOOO0O000O0OO0O .text is not None )#line:1978
         message_queue .put (O0O00OOO0O00OOO00 )#line:1979
 async def bot_autocasino (OOO00000OO00OOOO0 ,O0O0000OOO00O000O ):#line:1982
